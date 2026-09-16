@@ -65,6 +65,11 @@ CREATE TABLE IF NOT EXISTS public.admins (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Migração: se public.admins já existia de uma execução anterior deste
+-- script (antes da coluna created_at existir), CREATE TABLE IF NOT EXISTS
+-- acima não adiciona a coluna em uma tabela já existente — faz isso aqui.
+ALTER TABLE public.admins ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL;
+
 ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
 
 -- Ninguém acessa a tabela admins diretamente pelo client (nem leitura) — só a
