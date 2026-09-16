@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Edit, Trash2, Image as ImageIcon, Film, LogOut, Tag, Wrench, ShieldCheck } from 'lucide-react';
+import { Plus, Edit, Trash2, Image as ImageIcon, Film, LogOut, Tag, Wrench, ShieldCheck, Cpu } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { format } from 'date-fns';
 
@@ -19,6 +19,7 @@ type Item = {
   media_url: string;
   created_at: string;
   tool: { name: string } | null;
+  engine: { name: string } | null;
   niche: { name: string } | null;
 };
 
@@ -34,6 +35,7 @@ export default function AdminDashboardPage() {
 
   const [niches, setNiches] = useState<Lookup[]>([]);
   const [tools, setTools] = useState<Lookup[]>([]);
+  const [engines, setEngines] = useState<Lookup[]>([]);
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [adminsError, setAdminsError] = useState<string | null>(null);
 
@@ -48,6 +50,7 @@ export default function AdminDashboardPage() {
         .select(`
           id, type, title, prompt_text, media_url, created_at,
           tool:tools(name),
+          engine:engines(name),
           niche:niches(name)
         `)
         .order('created_at', { ascending: false })
@@ -68,12 +71,14 @@ export default function AdminDashboardPage() {
 
   const fetchLookups = useCallback(async () => {
     try {
-      const [{ data: nData }, { data: tData }] = await Promise.all([
+      const [{ data: nData }, { data: tData }, { data: eData }] = await Promise.all([
         supabase.from('niches').select('*').order('name'),
         supabase.from('tools').select('*').order('name'),
+        supabase.from('engines').select('*').order('name'),
       ]);
       if (nData) setNiches(nData);
       if (tData) setTools(tData);
+      if (eData) setEngines(eData);
     } catch (error) {
       console.error('Falha ao carregar nichos/ferramentas:', error);
     }
@@ -167,6 +172,38 @@ export default function AdminDashboardPage() {
     fetchLookups();
   };
 
+  const handleRenameEngine = async (engine: Lookup) => {
+    const name = prompt('Renomear motor de IA:', engine.name);
+    if (!name || name === engine.name) return;
+    const { error } = await supabase.from('engines').update({ name }).eq('id', engine.id);
+    if (error) {
+      alert('Erro ao renomear motor de IA: ' + error.message);
+      return;
+    }
+    fetchLookups();
+  };
+
+  const handleDeleteEngine = async (engine: Lookup) => {
+    if (!confirm(`Excluir o motor "${engine.name}"? Só é possível se nenhum item o estiver usando.`)) return;
+    const { error } = await supabase.from('engines').delete().eq('id', engine.id);
+    if (error) {
+      alert('Não foi possível excluir: existem itens usando este motor.');
+      return;
+    }
+    fetchLookups();
+  };
+
+  const handleCreateEngine = async () => {
+    const name = prompt('Novo motor de IA (ex: VEO 3, Kling 2.5):');
+    if (!name) return;
+    const { error } = await supabase.from('engines').insert([{ name }]);
+    if (error) {
+      alert('Erro ao criar motor de IA: ' + error.message);
+      return;
+    }
+    fetchLookups();
+  };
+
   const handleCreateNiche = async () => {
     const name = prompt('Novo nicho:');
     if (!name) return;
@@ -244,7 +281,7 @@ export default function AdminDashboardPage() {
                 <th className="py-3 px-4 w-24">Media</th>
                 <th className="py-3 px-4">Título & Prompt</th>
                 <th className="py-3 px-4 w-28">Tipo</th>
-                <th className="py-3 px-4 w-36">Nicho / Motor</th>
+                <th className="py-3 px-4 w-36">Nicho / Ferramenta / Motor</th>
                 <th className="py-3 px-4 w-28">Data</th>
                 <th className="py-3 px-4 w-24 text-right">Ações</th>
               </tr>
@@ -288,7 +325,7 @@ export default function AdminDashboardPage() {
                     <td className="py-3 px-4 align-middle">
                       <div className="flex flex-col gap-1">
                         <span className="text-xs text-on-surface">{item.niche?.name}</span>
-                        <span className="text-[10px] font-mono text-outline">{item.tool?.name}</span>
+                        <span className="text-[10px] font-mono text-outline">{item.tool?.name}{item.engine?.name ? ` · ${item.engine.name}` : ''}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4 align-middle text-xs text-on-surface-variant font-mono">
@@ -376,6 +413,33 @@ export default function AdminDashboardPage() {
               </div>
             ))}
             {tools.length === 0 && <p className="text-xs text-on-surface-variant py-2">Nenhuma ferramenta cadastrada.</p>}
+          </div>
+        </div>
+
+        <div className="bg-surface-container-low rounded-xl border border-surface-container-highest/30 shadow-sm p-5 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-on-surface flex items-center gap-2">
+              <Cpu size={16} className="text-tertiary" /> Motores de IA
+            </h2>
+            <button type="button" onClick={handleCreateEngine} className="text-[10px] font-mono text-tertiary flex items-center gap-1 hover:underline">
+              <Plus size={12} /> Novo
+            </button>
+          </div>
+          <div className="flex flex-col divide-y divide-surface-container-high/60">
+            {engines.map(engine => (
+              <div key={engine.id} className="flex items-center justify-between py-2">
+                <span className="text-sm text-on-surface-variant">{engine.name}</span>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => handleRenameEngine(engine)} className="p-1.5 rounded text-outline hover:text-primary hover:bg-surface-container transition-colors">
+                    <Edit size={14} />
+                  </button>
+                  <button onClick={() => handleDeleteEngine(engine)} className="p-1.5 rounded text-outline hover:text-error hover:bg-surface-container transition-colors">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {engines.length === 0 && <p className="text-xs text-on-surface-variant py-2">Nenhum motor cadastrado.</p>}
           </div>
         </div>
 

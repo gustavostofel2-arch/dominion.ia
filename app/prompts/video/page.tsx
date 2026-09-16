@@ -25,7 +25,7 @@ function PromptsVideoContent() {
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 pr-4">
           <button
             onClick={() => setActiveNiche('all')}
-            className={`shrink-0 px-4 py-1.5 rounded-lg font-mono text-xs transition-all flex items-center gap-1.5 ${
+            className={`shrink-0 px-4 py-1.5 rounded-full font-mono text-xs transition-all flex items-center gap-1.5 ${
               activeNiche === 'all'
                 ? 'bg-secondary-container text-on-secondary-container font-semibold shadow-[0_0_16px_rgba(0,166,224,0.25)]'
                 : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
@@ -38,7 +38,7 @@ function PromptsVideoContent() {
             <button
               key={niche.id}
               onClick={() => setActiveNiche(niche.id)}
-              className={`shrink-0 px-4 py-1.5 rounded-lg font-mono text-xs transition-all flex items-center gap-1.5 ${
+              className={`shrink-0 px-4 py-1.5 rounded-full font-mono text-xs transition-all flex items-center gap-1.5 ${
                 activeNiche === niche.id
                   ? 'bg-secondary-container text-on-secondary-container font-semibold shadow-[0_0_16px_rgba(0,166,224,0.25)]'
                   : 'bg-surface-container text-on-surface-variant hover:text-on-surface'

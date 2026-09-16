@@ -32,6 +32,7 @@ export function usePromptLibrary(type: 'image' | 'video') {
       .select(`
         id, type, title, prompt_text, media_url,
         tool:tools(name),
+        engine:engines(name),
         niche:niches(id, name)
       `)
       .eq('type', type)
@@ -53,6 +54,7 @@ export function usePromptLibrary(type: 'image' | 'video') {
           prompt_text: item.prompt_text,
           media_url: item.media_url,
           tool: { name: item.tool?.name || 'Unknown' },
+          engine: item.engine?.name ? { name: item.engine.name } : null,
           niche: { name: item.niche?.name || 'Unknown' },
         }));
         setItems(prev => (pageIndex === 0 ? formatted : [...prev, ...formatted]));

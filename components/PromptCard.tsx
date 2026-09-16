@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Copy, Check, Terminal, Heart, Play, Film } from 'lucide-react';
+import { Copy, Check, Terminal, Heart, Film } from 'lucide-react';
 import clsx from 'clsx';
 import Image from 'next/image';
+import { YouTubeAutoplayEmbed } from './YouTubeAutoplayEmbed';
 
 export type PromptItem = {
   id: string;
@@ -12,12 +13,12 @@ export type PromptItem = {
   prompt_text: string;
   media_url: string;
   tool: { name: string };
+  engine?: { name: string } | null;
   niche: { name: string };
 };
 
 export function PromptCard({ item }: { item: PromptItem }) {
   const [copied, setCopied] = useState(false);
-  const [playing, setPlaying] = useState(false);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(item.prompt_text);
@@ -51,43 +52,17 @@ export function PromptCard({ item }: { item: PromptItem }) {
     <div className="group flex flex-col bg-surface-container-low rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border border-surface-container-highest/50 hover:border-primary/20">
       
       {/* Media Frame */}
-      <div className="relative aspect-[16/10] overflow-hidden bg-surface-container-lowest select-none">
+      <div className={clsx(
+        "relative overflow-hidden bg-surface-container-lowest select-none",
+        isVideo ? "aspect-[9/16]" : "aspect-[16/10]"
+      )}>
         {isVideo && !ytId ? (
           <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-on-surface-variant p-4 text-center">
             <Film size={24} className="text-secondary" />
             <span className="text-xs">Link do YouTube não reconhecido</span>
           </div>
         ) : isVideo && ytId ? (
-          playing ? (
-            <iframe
-              src={`https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&autoplay=1`}
-              title={item.title}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setPlaying(true)}
-              className="relative w-full h-full block"
-              aria-label={`Reproduzir ${item.title}`}
-            >
-              <Image
-                src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`}
-                alt={item.title}
-                fill
-                unoptimized
-                loading="lazy"
-                className="object-cover"
-              />
-              <span className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
-                <span className="w-14 h-14 rounded-full bg-surface-container-lowest/80 backdrop-blur-md flex items-center justify-center text-on-surface shadow-lg">
-                  <Play size={24} className="ml-1" fill="currentColor" />
-                </span>
-              </span>
-            </button>
-          )
+          <YouTubeAutoplayEmbed videoId={ytId} title={item.title} />
         ) : (
           <Image
             src={item.media_url || 'https://picsum.photos/seed/placeholder/800/500'}
@@ -103,20 +78,25 @@ export function PromptCard({ item }: { item: PromptItem }) {
         <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/90 via-transparent to-black/20 pointer-events-none"></div>
         
         {/* Top Badges */}
-        <div className="absolute top-2 left-2 flex items-center gap-1.5 z-10">
+        <div className="absolute top-2 left-2 right-11 flex flex-wrap items-center gap-1.5 z-10 pointer-events-none">
           <span className={clsx(
             "px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider font-semibold backdrop-blur-md",
             isVideo ? "bg-secondary/15 text-secondary" : "bg-primary-container/20 text-primary"
           )}>
             {item.tool?.name || 'Ferramenta'}
           </span>
+          {item.engine?.name && (
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-tertiary/15 text-tertiary backdrop-blur-md">
+              {item.engine.name}
+            </span>
+          )}
           <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-surface-container-highest/80 text-on-surface backdrop-blur-md">
             {item.niche?.name || 'Nicho'}
           </span>
         </div>
 
         <div className="absolute top-2 right-2 z-10">
-          <button type="button" className="w-7 h-7 flex items-center justify-center rounded bg-surface-container-lowest/70 backdrop-blur-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors">
+          <button type="button" onClick={(e) => e.stopPropagation()} className="w-7 h-7 flex items-center justify-center rounded bg-surface-container-lowest/70 backdrop-blur-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors">
             <Heart size={14} />
           </button>
         </div>

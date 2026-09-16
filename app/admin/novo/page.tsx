@@ -19,12 +19,14 @@ function AdminNovoItemContent() {
   const [initialLoad, setInitialLoad] = useState(!!editId);
   const [niches, setNiches] = useState<Lookup[]>([]);
   const [tools, setTools] = useState<Lookup[]>([]);
+  const [engines, setEngines] = useState<Lookup[]>([]);
 
   const [formData, setFormData] = useState({
     title: '',
     type: 'image',
     niche_id: '',
     tool_id: '',
+    engine_id: '',
     media_url: '',
     prompt_text: '',
   });
@@ -39,6 +41,9 @@ function AdminNovoItemContent() {
         const { data: tData } = await supabase.from('tools').select('*').order('name');
         if (tData) setTools(tData);
 
+        const { data: eData } = await supabase.from('engines').select('*').order('name');
+        if (eData) setEngines(eData);
+
         if (nData?.length && !formData.niche_id) setFormData(f => ({...f, niche_id: nData[0].id}));
         if (tData?.length && !formData.tool_id) setFormData(f => ({...f, tool_id: tData[0].id}));
 
@@ -51,6 +56,7 @@ function AdminNovoItemContent() {
               type: itemData.type,
               niche_id: itemData.niche_id,
               tool_id: itemData.tool_id,
+              engine_id: itemData.engine_id || '',
               media_url: itemData.media_url,
               prompt_text: itemData.prompt_text,
             });
@@ -70,9 +76,10 @@ function AdminNovoItemContent() {
     setLoading(true);
 
     try {
+      const payload = { ...formData, engine_id: formData.engine_id || null };
       const { error } = editId
-        ? await supabase.from('items').update(formData).eq('id', editId)
-        : await supabase.from('items').insert([formData]);
+        ? await supabase.from('items').update(payload).eq('id', editId)
+        : await supabase.from('items').insert([payload]);
 
       if (error) throw error;
       router.push('/admin');
@@ -109,6 +116,20 @@ function AdminNovoItemContent() {
     if (data) {
       setTools([...tools, data]);
       setFormData({...formData, tool_id: data.id});
+    }
+  };
+
+  const handleCreateEngine = async () => {
+    const name = prompt('Novo Motor de IA (ex: VEO 3, Kling 2.5):');
+    if (!name) return;
+    const { data, error } = await supabase.from('engines').insert([{ name }]).select().single();
+    if (error) {
+      alert('Erro ao criar motor de IA: ' + error.message);
+      return;
+    }
+    if (data) {
+      setEngines([...engines, data]);
+      setFormData({...formData, engine_id: data.id});
     }
   };
 
@@ -153,7 +174,7 @@ function AdminNovoItemContent() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <label className="text-[10px] font-mono text-outline uppercase tracking-wider">Nicho Estratégico</label>
@@ -161,7 +182,7 @@ function AdminNovoItemContent() {
                 <Plus size={12}/> Novo
               </button>
             </div>
-            <select 
+            <select
               value={formData.niche_id}
               onChange={(e) => setFormData({...formData, niche_id: e.target.value})}
               required
@@ -174,12 +195,12 @@ function AdminNovoItemContent() {
 
           <div className="flex flex-col gap-1.5">
              <div className="flex items-center justify-between">
-              <label className="text-[10px] font-mono text-outline uppercase tracking-wider">Ferramenta / Motor</label>
+              <label className="text-[10px] font-mono text-outline uppercase tracking-wider">Ferramenta</label>
               <button type="button" onClick={handleCreateTool} className="text-[10px] font-mono text-secondary flex items-center gap-1 hover:underline">
-                <Plus size={12}/> Novo
+                <Plus size={12}/> Nova
               </button>
             </div>
-            <select 
+            <select
               value={formData.tool_id}
               onChange={(e) => setFormData({...formData, tool_id: e.target.value})}
               required
@@ -187,6 +208,23 @@ function AdminNovoItemContent() {
             >
               <option value="">Selecione...</option>
               {tools.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+             <div className="flex items-center justify-between">
+              <label className="text-[10px] font-mono text-outline uppercase tracking-wider">Motor de IA</label>
+              <button type="button" onClick={handleCreateEngine} className="text-[10px] font-mono text-tertiary flex items-center gap-1 hover:underline">
+                <Plus size={12}/> Novo
+              </button>
+            </div>
+            <select
+              value={formData.engine_id}
+              onChange={(e) => setFormData({...formData, engine_id: e.target.value})}
+              className="px-4 py-2.5 bg-surface-container text-on-surface rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="">Nenhum</option>
+              {engines.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
             </select>
           </div>
         </div>

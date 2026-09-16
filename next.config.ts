@@ -39,7 +39,11 @@ const nextConfig: NextConfig = {
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https:",
               "frame-src https://www.youtube.com https://youtube.com",
-              "connect-src 'self' https://*.supabase.co",
+              // Precisa de https: amplo (não só o domínio do Supabase) porque
+              // o admin pode cadastrar qualquer URL de imagem externa, e o
+              // next/image + as miniaturas do YouTube (img.youtube.com)
+              // contam como conexão (fetch/XHR) para o navegador, não só img-src.
+              "connect-src 'self' https:",
             ].join('; '),
           },
         ],

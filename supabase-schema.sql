@@ -19,6 +19,16 @@ CREATE TABLE IF NOT EXISTS public.tools (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Tabela: engines (Motores de IA — ex: VEO 3, Kling 2.5, Sora — que rodam
+-- dentro de uma ferramenta/plataforma. Uma ferramenta como Magnific AI ou
+-- Google Flow pode rodar vários motores diferentes; por isso são duas
+-- entidades separadas, cada uma com seu próprio filtro/cadastro.)
+CREATE TABLE IF NOT EXISTS public.engines (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Tabela: items (Prompts de Imagem e Vídeo)
 CREATE TABLE IF NOT EXISTS public.items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -31,25 +41,36 @@ CREATE TABLE IF NOT EXISTS public.items (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Inserir dados iniciais de exemplo (Nichos)
-INSERT INTO public.niches (name) VALUES
-('Criador UGC'),
-('POV'),
-('POV com Produto'),
-('POV com Roupa'),
-('Cinematográfico'),
-('Editorial Moda')
-ON CONFLICT (name) DO NOTHING;
+-- Migração: adiciona a referência ao motor de IA em instalações que já
+-- tinham a tabela items antes dessa coluna existir.
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS engine_id UUID REFERENCES public.engines(id) ON DELETE RESTRICT;
 
--- Inserir dados iniciais de exemplo (Ferramentas)
-INSERT INTO public.tools (name) VALUES
-('Midjourney v6.1'),
-('Magnific AI'),
-('FLUX.1 Pro'),
-('DALL-E 3'),
-('VO3 Video'),
-('Runway Gen-3')
-ON CONFLICT (name) DO NOTHING;
+-- Dados iniciais de exemplo — só entram na primeiríssima vez (tabela vazia).
+-- Assim, se você já apagou algum nicho/ferramenta/motor de exemplo, rodar
+-- este script de novo (para outras migrações) não vai trazê-lo de volta.
+INSERT INTO public.niches (name)
+SELECT v.name FROM (VALUES
+  ('Criador UGC'), ('POV'), ('POV com Produto'), ('POV com Roupa'),
+  ('Cinematográfico'), ('Editorial Moda')
+) AS v(name)
+WHERE NOT EXISTS (SELECT 1 FROM public.niches);
+
+INSERT INTO public.tools (name)
+SELECT v.name FROM (VALUES
+  ('Midjourney'), ('Magnific AI'), ('Google Flow'), ('DALL-E'), ('Runway')
+) AS v(name)
+WHERE NOT EXISTS (SELECT 1 FROM public.tools);
+
+INSERT INTO public.engines (name)
+SELECT v.name FROM (VALUES
+  ('VEO 3'), ('Kling 2.5'), ('Sora 2'), ('Runway Gen-3'), ('FLUX.1 Pro'), ('Midjourney v6.1')
+) AS v(name)
+WHERE NOT EXISTS (SELECT 1 FROM public.engines);
+
+-- "Google Flow" é uma adição nova (não fazia parte do seed original) — este
+-- insert roda toda vez mas é seguro (ON CONFLICT DO NOTHING), diferente dos
+-- seeds acima que só rodam com a tabela vazia.
+INSERT INTO public.tools (name) VALUES ('Google Flow') ON CONFLICT (name) DO NOTHING;
 
 -- ============================================================================
 -- Controle de administradores
@@ -191,6 +212,7 @@ GRANT EXECUTE ON FUNCTION public.remove_admin_by_email(TEXT) TO authenticated;
 -- ============================================================================
 ALTER TABLE public.niches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tools ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.engines ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.items ENABLE ROW LEVEL SECURITY;
 
 -- Permitir leitura pública (alunos podem ver)
@@ -199,6 +221,9 @@ CREATE POLICY "Leitura pública de nichos" ON public.niches FOR SELECT USING (tr
 
 DROP POLICY IF EXISTS "Leitura pública de ferramentas" ON public.tools;
 CREATE POLICY "Leitura pública de ferramentas" ON public.tools FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Leitura pública de motores" ON public.engines;
+CREATE POLICY "Leitura pública de motores" ON public.engines FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Leitura pública de itens" ON public.items;
 CREATE POLICY "Leitura pública de itens" ON public.items FOR SELECT USING (true);
@@ -211,6 +236,9 @@ CREATE POLICY "Escrita admin em nichos" ON public.niches FOR ALL USING (public.i
 DROP POLICY IF EXISTS "Escrita autenticada em ferramentas" ON public.tools;
 DROP POLICY IF EXISTS "Escrita admin em ferramentas" ON public.tools;
 CREATE POLICY "Escrita admin em ferramentas" ON public.tools FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS "Escrita admin em motores" ON public.engines;
+CREATE POLICY "Escrita admin em motores" ON public.engines FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 DROP POLICY IF EXISTS "Escrita autenticada em itens" ON public.items;
 DROP POLICY IF EXISTS "Escrita admin em itens" ON public.items;

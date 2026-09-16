@@ -1,7 +1,86 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Sparkles, Image as ImageIcon, Film } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { YouTubeAutoplayEmbed } from '@/components/YouTubeAutoplayEmbed';
+
+const supabase = createClient();
+
+type FeedItem = {
+  id: string;
+  type: 'image' | 'video';
+  title: string;
+  media_url: string;
+};
+
+const getYouTubeId = (url: string) => {
+  if (!url) return null;
+  const patterns = [
+    /youtu\.be\/([a-zA-Z0-9_-]{6,})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{6,})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{6,})/,
+    /youtube\.com\/live\/([a-zA-Z0-9_-]{6,})/,
+    /youtube\.com\/v\/([a-zA-Z0-9_-]{6,})/,
+    /[?&]v=([a-zA-Z0-9_-]{6,})/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+};
+
+function FeedTile({ item }: { item: FeedItem }) {
+  const ytId = item.type === 'video' ? getYouTubeId(item.media_url) : null;
+
+  return (
+    <Link
+      href={item.type === 'video' ? '/prompts/video' : '/prompts/imagem'}
+      className={`group relative block w-full break-inside-avoid mb-4 rounded-xl overflow-hidden bg-surface-container-low border border-surface-container-highest/30 shadow-lg ${
+        item.type === 'video' ? 'aspect-[9/16]' : 'aspect-[4/5]'
+      }`}
+    >
+      {item.type === 'video' && ytId ? (
+        <YouTubeAutoplayEmbed videoId={ytId} title={item.title} interactive={false} />
+      ) : (
+        <Image
+          src={item.media_url || 'https://picsum.photos/seed/placeholder/600/750'}
+          alt={item.title}
+          fill
+          unoptimized
+          loading="lazy"
+          className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+        />
+      )}
+      <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent pointer-events-none">
+        <span className="text-xs font-medium text-white truncate block">{item.title}</span>
+      </div>
+    </Link>
+  );
+}
 
 export default function Home() {
+  const [feed, setFeed] = useState<FeedItem[]>([]);
+
+  useEffect(() => {
+    async function loadFeed() {
+      try {
+        const { data } = await supabase
+          .from('items')
+          .select('id, type, title, media_url')
+          .order('created_at', { ascending: false })
+          .limit(12);
+        if (data) setFeed(data);
+      } catch (error) {
+        console.error('Falha ao carregar destaques:', error);
+      }
+    }
+    void loadFeed();
+  }, []);
+
   return (
     <div className="flex flex-col gap-8 max-w-5xl mx-auto w-full">
       {/* Hero Section */}
@@ -28,7 +107,7 @@ export default function Home() {
 
       {/* Quick Access Cards */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Link 
+        <Link
           href="/prompts/imagem"
           className="group relative flex flex-col justify-between p-8 rounded-2xl bg-surface-container-low hover:bg-surface-container transition-all duration-300 shadow-lg border border-surface-container-highest/50 overflow-hidden"
         >
@@ -52,7 +131,7 @@ export default function Home() {
           </div>
         </Link>
 
-        <Link 
+        <Link
           href="/prompts/video"
           className="group relative flex flex-col justify-between p-8 rounded-2xl bg-surface-container-low hover:bg-surface-container transition-all duration-300 shadow-lg border border-surface-container-highest/50 overflow-hidden"
         >
@@ -93,6 +172,21 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Mixed feed of recent images/videos */}
+      {feed.length > 0 && (
+        <section className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(255,95,216,0.9)]"></span>
+            <h2 className="text-lg font-semibold text-on-surface">Recém-adicionados</h2>
+          </div>
+          <div className="columns-2 md:columns-3 lg:columns-4 gap-4">
+            {feed.map(item => (
+              <FeedTile key={item.id} item={item} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
