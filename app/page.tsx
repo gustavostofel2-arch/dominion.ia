@@ -13,7 +13,9 @@ type FeedItem = {
   id: string;
   type: 'image' | 'video';
   title: string;
+  prompt_text: string;
   media_url: string;
+  tool: { name: string } | null;
 };
 
 const getYouTubeId = (url: string) => {
@@ -35,28 +37,38 @@ const getYouTubeId = (url: string) => {
 
 function FeedTile({ item }: { item: FeedItem }) {
   const ytId = item.type === 'video' ? getYouTubeId(item.media_url) : null;
+  const isVideo = item.type === 'video';
 
   return (
     <Link
-      href={item.type === 'video' ? '/prompts/video' : '/prompts/imagem'}
-      className={`group relative block w-full break-inside-avoid mb-4 rounded-xl overflow-hidden bg-surface-container-low border border-surface-container-highest/30 shadow-lg ${
-        item.type === 'video' ? 'aspect-[9/16]' : 'aspect-[4/5]'
-      }`}
+      href={isVideo ? '/prompts/video' : '/prompts/imagem'}
+      className="group block w-full break-inside-avoid mb-4 rounded-xl overflow-hidden bg-surface-container-low border border-surface-container-highest/30 shadow-lg hover:shadow-2xl transition-all duration-300"
     >
-      {item.type === 'video' && ytId ? (
-        <YouTubeAutoplayEmbed videoId={ytId} title={item.title} interactive={false} />
-      ) : (
-        <Image
-          src={item.media_url || 'https://picsum.photos/seed/placeholder/600/750'}
-          alt={item.title}
-          fill
-          unoptimized
-          loading="lazy"
-          className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-        />
-      )}
-      <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent pointer-events-none">
-        <span className="text-xs font-medium text-white truncate block">{item.title}</span>
+      <div className={`relative w-full ${isVideo ? 'aspect-[9/16]' : 'aspect-[4/5]'}`}>
+        {isVideo && ytId ? (
+          <YouTubeAutoplayEmbed videoId={ytId} title={item.title} interactive={false} />
+        ) : (
+          <Image
+            src={item.media_url || 'https://picsum.photos/seed/placeholder/600/750'}
+            alt={item.title}
+            fill
+            unoptimized
+            loading="lazy"
+            className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+          />
+        )}
+        <div className="absolute top-2 left-2 z-10 pointer-events-none">
+          <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider font-semibold backdrop-blur-md flex items-center gap-1 ${
+            isVideo ? 'bg-secondary/15 text-secondary' : 'bg-primary-container/20 text-primary'
+          }`}>
+            {isVideo ? <Film size={10} /> : <ImageIcon size={10} />}
+            {item.tool?.name || (isVideo ? 'Vídeo' : 'Imagem')}
+          </span>
+        </div>
+      </div>
+      <div className="p-3 flex flex-col gap-0.5">
+        <span className="text-sm font-semibold text-on-surface truncate">{item.title}</span>
+        <span className="text-xs text-on-surface-variant line-clamp-2">{item.prompt_text}</span>
       </div>
     </Link>
   );
@@ -70,10 +82,10 @@ export default function Home() {
       try {
         const { data } = await supabase
           .from('items')
-          .select('id, type, title, media_url')
+          .select('id, type, title, prompt_text, media_url, tool:tools(name)')
           .order('created_at', { ascending: false })
           .limit(12);
-        if (data) setFeed(data);
+        if (data) setFeed(data as unknown as FeedItem[]);
       } catch (error) {
         console.error('Falha ao carregar destaques:', error);
       }

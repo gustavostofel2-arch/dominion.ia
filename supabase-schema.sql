@@ -243,3 +243,9 @@ CREATE POLICY "Escrita admin em motores" ON public.engines FOR ALL USING (public
 DROP POLICY IF EXISTS "Escrita autenticada em itens" ON public.items;
 DROP POLICY IF EXISTS "Escrita admin em itens" ON public.items;
 CREATE POLICY "Escrita admin em itens" ON public.items FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Força o PostgREST a recarregar o cache de schema imediatamente. Sem isso,
+-- tabelas/colunas novas (como public.engines) só ficam visíveis pra API
+-- depois de alguns minutos (ou de um reload manual em Database > API),
+-- e até lá qualquer query com join nelas retorna erro "relationship not found".
+NOTIFY pgrst, 'reload schema';
