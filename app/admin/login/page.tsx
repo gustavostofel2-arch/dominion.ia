@@ -1,41 +1,40 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Terminal, Lock, Mail, Eye, EyeOff } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 
-export default function AdminLoginPage() {
+const supabase = createClient();
+
+function AdminLoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
-    // For demo purposes, we can bypass strict auth if Supabase isn't configured, 
-    // but here is the real implementation:
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
-       // Mock fallback for prototype testing if Supabase is not fully set up
-       if (email === 'admin@dominion.com' && password === 'admin') {
-          router.push('/admin');
-       } else {
-          setError('Credenciais inválidas ou Supabase não configurado. (Dica: admin@dominion.com / admin)');
-          setLoading(false);
-       }
-    } else {
-      router.push('/admin');
+      setError('Credenciais inválidas.');
+      setLoading(false);
+      return;
     }
+
+    const next = searchParams.get('next') || '/admin';
+    router.push(next);
+    router.refresh();
   };
 
   return (
@@ -115,5 +114,13 @@ export default function AdminLoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminLoginForm />
+    </Suspense>
   );
 }

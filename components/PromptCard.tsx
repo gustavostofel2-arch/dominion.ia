@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Copy, Check, Terminal, Heart, Play } from 'lucide-react';
 import clsx from 'clsx';
+import Image from 'next/image';
 
 export type PromptItem = {
   id: string;
@@ -16,6 +17,7 @@ export type PromptItem = {
 
 export function PromptCard({ item }: { item: PromptItem }) {
   const [copied, setCopied] = useState(false);
+  const [playing, setPlaying] = useState(false);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(item.prompt_text);
@@ -40,19 +42,44 @@ export function PromptCard({ item }: { item: PromptItem }) {
       {/* Media Frame */}
       <div className="relative aspect-[16/10] overflow-hidden bg-surface-container-lowest select-none">
         {isVideo && ytId ? (
-          <iframe
-            src={`https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&controls=0`}
-            title={item.title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            className="w-full h-full object-cover"
-          />
+          playing ? (
+            <iframe
+              src={`https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&autoplay=1`}
+              title={item.title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPlaying(true)}
+              className="relative w-full h-full block"
+              aria-label={`Reproduzir ${item.title}`}
+            >
+              <Image
+                src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`}
+                alt={item.title}
+                fill
+                unoptimized
+                loading="lazy"
+                className="object-cover"
+              />
+              <span className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
+                <span className="w-14 h-14 rounded-full bg-surface-container-lowest/80 backdrop-blur-md flex items-center justify-center text-on-surface shadow-lg">
+                  <Play size={24} className="ml-1" fill="currentColor" />
+                </span>
+              </span>
+            </button>
+          )
         ) : (
-          <img 
-            src={item.media_url || 'https://picsum.photos/seed/placeholder/800/500'} 
+          <Image
+            src={item.media_url || 'https://picsum.photos/seed/placeholder/800/500'}
             alt={item.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-            referrerPolicy="no-referrer"
+            fill
+            unoptimized
+            loading="lazy"
+            className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
           />
         )}
         

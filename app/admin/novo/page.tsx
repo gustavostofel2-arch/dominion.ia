@@ -4,7 +4,11 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Save, Plus } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
+
+const supabase = createClient();
+
+type Lookup = { id: string; name: string };
 
 function AdminNovoItemContent() {
   const router = useRouter();
@@ -13,8 +17,8 @@ function AdminNovoItemContent() {
 
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(!!editId);
-  const [niches, setNiches] = useState<any[]>([]);
-  const [tools, setTools] = useState<any[]>([]);
+  const [niches, setNiches] = useState<Lookup[]>([]);
+  const [tools, setTools] = useState<Lookup[]>([]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -27,29 +31,33 @@ function AdminNovoItemContent() {
 
   useEffect(() => {
     async function loadData() {
-      // Load dropdowns
-      const { data: nData } = await supabase.from('niches').select('*').order('name');
-      if (nData) setNiches(nData);
-      
-      const { data: tData } = await supabase.from('tools').select('*').order('name');
-      if (tData) setTools(tData);
+      try {
+        // Load dropdowns
+        const { data: nData } = await supabase.from('niches').select('*').order('name');
+        if (nData) setNiches(nData);
 
-      if (nData?.length && !formData.niche_id) setFormData(f => ({...f, niche_id: nData[0].id}));
-      if (tData?.length && !formData.tool_id) setFormData(f => ({...f, tool_id: tData[0].id}));
+        const { data: tData } = await supabase.from('tools').select('*').order('name');
+        if (tData) setTools(tData);
 
-      // If editing, load item
-      if (editId) {
-        const { data: itemData } = await supabase.from('items').select('*').eq('id', editId).single();
-        if (itemData) {
-          setFormData({
-            title: itemData.title,
-            type: itemData.type,
-            niche_id: itemData.niche_id,
-            tool_id: itemData.tool_id,
-            media_url: itemData.media_url,
-            prompt_text: itemData.prompt_text,
-          });
+        if (nData?.length && !formData.niche_id) setFormData(f => ({...f, niche_id: nData[0].id}));
+        if (tData?.length && !formData.tool_id) setFormData(f => ({...f, tool_id: tData[0].id}));
+
+        // If editing, load item
+        if (editId) {
+          const { data: itemData } = await supabase.from('items').select('*').eq('id', editId).single();
+          if (itemData) {
+            setFormData({
+              title: itemData.title,
+              type: itemData.type,
+              niche_id: itemData.niche_id,
+              tool_id: itemData.tool_id,
+              media_url: itemData.media_url,
+              prompt_text: itemData.prompt_text,
+            });
+          }
         }
+      } catch (error) {
+        console.error('Falha ao carregar dados do formulário:', error);
       }
       setInitialLoad(false);
     }
@@ -62,11 +70,11 @@ function AdminNovoItemContent() {
     setLoading(true);
 
     try {
-      if (editId) {
-        await supabase.from('items').update(formData).eq('id', editId);
-      } else {
-        await supabase.from('items').insert([formData]);
-      }
+      const { error } = editId
+        ? await supabase.from('items').update(formData).eq('id', editId)
+        : await supabase.from('items').insert([formData]);
+
+      if (error) throw error;
       router.push('/admin');
     } catch (error) {
       console.error(error);
@@ -78,23 +86,29 @@ function AdminNovoItemContent() {
 
   const handleCreateNiche = async () => {
     const name = prompt('Novo Nicho:');
-    if (name) {
-      const { data, error } = await supabase.from('niches').insert([{ name }]).select().single();
-      if (data) {
-        setNiches([...niches, data]);
-        setFormData({...formData, niche_id: data.id});
-      }
+    if (!name) return;
+    const { data, error } = await supabase.from('niches').insert([{ name }]).select().single();
+    if (error) {
+      alert('Erro ao criar nicho: ' + error.message);
+      return;
+    }
+    if (data) {
+      setNiches([...niches, data]);
+      setFormData({...formData, niche_id: data.id});
     }
   };
 
   const handleCreateTool = async () => {
     const name = prompt('Nova Ferramenta:');
-    if (name) {
-      const { data, error } = await supabase.from('tools').insert([{ name }]).select().single();
-      if (data) {
-        setTools([...tools, data]);
-        setFormData({...formData, tool_id: data.id});
-      }
+    if (!name) return;
+    const { data, error } = await supabase.from('tools').insert([{ name }]).select().single();
+    if (error) {
+      alert('Erro ao criar ferramenta: ' + error.message);
+      return;
+    }
+    if (data) {
+      setTools([...tools, data]);
+      setFormData({...formData, tool_id: data.id});
     }
   };
 

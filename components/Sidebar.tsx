@@ -64,7 +64,7 @@ export function Sidebar() {
                   className={clsx(
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm w-full",
                     isActive
-                      ? "bg-primary-container text-on-primary-container font-semibold shadow-[0_0_16px_rgba(160,120,255,0.25)]"
+                      ? "bg-primary-container text-on-primary-container font-semibold shadow-[0_0_16px_rgba(255,95,216,0.25)]"
                       : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface",
                     isCollapsed ? "justify-center" : "justify-start"
                   )}
