@@ -390,7 +390,10 @@ export default function AdminDashboardPage() {
           </div>
           {adminsError ? (
             <p className="text-xs text-on-surface-variant py-2">
-              Não foi possível carregar (rode a versão atualizada de supabase-schema.sql no seu projeto Supabase).
+              {adminsError.includes('not authorized')
+                ? 'Sua conta ainda não está marcada como admin. Rode o INSERT do "primeiro admin" (comentado no topo de supabase-schema.sql) com o e-mail que você usou pra logar.'
+                : 'Não foi possível carregar (rode a versão atualizada de supabase-schema.sql no seu projeto Supabase — este recurso precisa das funções list_admins/add_admin_by_email/remove_admin_by_email).'}
+              <span className="block mt-1 text-outline">Detalhe: {adminsError}</span>
             </p>
           ) : (
             <div className="flex flex-col divide-y divide-surface-container-high/60">

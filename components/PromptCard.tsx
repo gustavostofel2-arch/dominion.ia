@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Copy, Check, Terminal, Heart, Play } from 'lucide-react';
+import { Copy, Check, Terminal, Heart, Play, Film } from 'lucide-react';
 import clsx from 'clsx';
 import Image from 'next/image';
 
@@ -27,11 +27,22 @@ export function PromptCard({ item }: { item: PromptItem }) {
 
   const isVideo = item.type === 'video';
 
-  // Helper to extract YouTube ID if it's a video
+  // Helper to extract YouTube ID from any common URL shape (watch, shorts, embed, youtu.be, live)
   const getYouTubeId = (url: string) => {
     if (!url) return null;
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
-    return match ? match[1] : null;
+    const patterns = [
+      /youtu\.be\/([a-zA-Z0-9_-]{6,})/,
+      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{6,})/,
+      /youtube\.com\/embed\/([a-zA-Z0-9_-]{6,})/,
+      /youtube\.com\/live\/([a-zA-Z0-9_-]{6,})/,
+      /youtube\.com\/v\/([a-zA-Z0-9_-]{6,})/,
+      /[?&]v=([a-zA-Z0-9_-]{6,})/,
+    ];
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
   };
 
   const ytId = isVideo ? getYouTubeId(item.media_url) : null;
@@ -41,7 +52,12 @@ export function PromptCard({ item }: { item: PromptItem }) {
       
       {/* Media Frame */}
       <div className="relative aspect-[16/10] overflow-hidden bg-surface-container-lowest select-none">
-        {isVideo && ytId ? (
+        {isVideo && !ytId ? (
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-on-surface-variant p-4 text-center">
+            <Film size={24} className="text-secondary" />
+            <span className="text-xs">Link do YouTube não reconhecido</span>
+          </div>
+        ) : isVideo && ytId ? (
           playing ? (
             <iframe
               src={`https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&autoplay=1`}
