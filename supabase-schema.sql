@@ -61,13 +61,15 @@ ON CONFLICT (name) DO NOTHING;
 -- supabase.auth.signUp() ganharia acesso de escrita. A tabela abaixo resolve
 -- isso: só usuários cujo id estiver em public.admins podem escrever.
 CREATE TABLE IF NOT EXISTS public.admins (
-  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
 
 -- Ninguém acessa a tabela admins diretamente pelo client (nem leitura) — só a
--- função is_admin() abaixo, que roda com privilégios de owner (SECURITY DEFINER).
+-- função is_admin() abaixo, que roda com privilégios de owner (SECURITY DEFINER),
+-- e as funções list/add/remove_admin abaixo (usadas pela tela Admin > Administradores).
 DROP POLICY IF EXISTS "Bloquear acesso direto a admins" ON public.admins;
 CREATE POLICY "Bloquear acesso direto a admins" ON public.admins FOR ALL USING (false);
 
@@ -83,12 +85,101 @@ AS $$
   );
 $$;
 
--- Depois de rodar este script, promova sua própria conta a admin (troque o
--- e-mail pelo do usuário que você já criou em Authentication > Users):
+-- ============================================================================
+-- Gestão de administradores pela UI (Admin > Administradores)
+-- ============================================================================
+-- Estas funções rodam com privilégio elevado (SECURITY DEFINER, único jeito de
+-- ler auth.users e escrever em public.admins, ambos bloqueados para o client
+-- comum), mas cada uma primeiro verifica public.is_admin() do usuário logado
+-- (auth.uid()) e recusa quem não for admin. Isso permite promover/remover
+-- administradores direto pelo painel, sem precisar abrir o SQL Editor de novo
+-- — exceto para o primeiro admin do projeto, que precisa do INSERT manual
+-- abaixo (ninguém é admin ainda pra autorizar a si mesmo pela função).
+--
+-- Primeiro admin (rode uma única vez, trocando o e-mail):
 --
 -- INSERT INTO public.admins (user_id)
 -- SELECT id FROM auth.users WHERE email = 'seu-email-admin@exemplo.com'
 -- ON CONFLICT DO NOTHING;
+
+CREATE OR REPLACE FUNCTION public.list_admins()
+RETURNS TABLE(user_id UUID, email TEXT, created_at TIMESTAMP WITH TIME ZONE)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'not authorized';
+  END IF;
+
+  RETURN QUERY
+  SELECT a.user_id, u.email::TEXT, a.created_at
+  FROM public.admins a
+  JOIN auth.users u ON u.id = a.user_id
+  ORDER BY a.created_at;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.add_admin_by_email(target_email TEXT)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  target_id UUID;
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'not authorized';
+  END IF;
+
+  SELECT id INTO target_id FROM auth.users WHERE email = target_email;
+  IF target_id IS NULL THEN
+    RAISE EXCEPTION 'Nenhum usuário com esse e-mail. Crie a conta em Authentication > Users antes de promover.';
+  END IF;
+
+  INSERT INTO public.admins (user_id) VALUES (target_id)
+  ON CONFLICT DO NOTHING;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.remove_admin_by_email(target_email TEXT)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  target_id UUID;
+  admin_count INTEGER;
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'not authorized';
+  END IF;
+
+  SELECT id INTO target_id FROM auth.users WHERE email = target_email;
+  IF target_id IS NULL THEN
+    RAISE EXCEPTION 'Usuário não encontrado.';
+  END IF;
+
+  SELECT count(*) INTO admin_count FROM public.admins;
+  IF admin_count <= 1 THEN
+    RAISE EXCEPTION 'Não é possível remover o último administrador.';
+  END IF;
+
+  DELETE FROM public.admins WHERE user_id = target_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.list_admins() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.list_admins() TO authenticated;
+
+REVOKE ALL ON FUNCTION public.add_admin_by_email(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.add_admin_by_email(TEXT) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.remove_admin_by_email(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.remove_admin_by_email(TEXT) TO authenticated;
 
 -- ============================================================================
 -- Row Level Security (RLS)

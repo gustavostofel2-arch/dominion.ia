@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Edit, Trash2, Image as ImageIcon, Film, LogOut, Tag, Wrench } from 'lucide-react';
+import { Plus, Edit, Trash2, Image as ImageIcon, Film, LogOut, Tag, Wrench, ShieldCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { format } from 'date-fns';
 
@@ -23,6 +23,7 @@ type Item = {
 };
 
 type Lookup = { id: string; name: string };
+type AdminUser = { user_id: string; email: string; created_at: string };
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -33,6 +34,8 @@ export default function AdminDashboardPage() {
 
   const [niches, setNiches] = useState<Lookup[]>([]);
   const [tools, setTools] = useState<Lookup[]>([]);
+  const [admins, setAdmins] = useState<AdminUser[]>([]);
+  const [adminsError, setAdminsError] = useState<string | null>(null);
 
   const fetchItems = useCallback(async (pageIndex: number) => {
     setLoading(true);
@@ -76,12 +79,27 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
+  const fetchAdmins = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.rpc('list_admins');
+      if (error) {
+        setAdminsError(error.message);
+        return;
+      }
+      setAdminsError(null);
+      setAdmins(data || []);
+    } catch (error) {
+      console.error('Falha ao carregar administradores:', error);
+    }
+  }, []);
+
   useEffect(() => {
     void (async () => {
       await fetchItems(0);
       await fetchLookups();
+      await fetchAdmins();
     })();
-  }, [fetchItems, fetchLookups]);
+  }, [fetchItems, fetchLookups, fetchAdmins]);
 
   const handleLoadMore = () => {
     const nextPage = page + 1;
@@ -169,6 +187,27 @@ export default function AdminDashboardPage() {
       return;
     }
     fetchLookups();
+  };
+
+  const handleAddAdmin = async () => {
+    const email = prompt('E-mail do novo administrador (a pessoa precisa já ter uma conta em Authentication > Users):');
+    if (!email) return;
+    const { error } = await supabase.rpc('add_admin_by_email', { target_email: email });
+    if (error) {
+      alert('Erro ao promover administrador: ' + error.message);
+      return;
+    }
+    fetchAdmins();
+  };
+
+  const handleRemoveAdmin = async (admin: AdminUser) => {
+    if (!confirm(`Remover o acesso de administrador de "${admin.email}"?`)) return;
+    const { error } = await supabase.rpc('remove_admin_by_email', { target_email: admin.email });
+    if (error) {
+      alert('Erro ao remover administrador: ' + error.message);
+      return;
+    }
+    fetchAdmins();
   };
 
   return (
@@ -285,7 +324,7 @@ export default function AdminDashboardPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         <div className="bg-surface-container-low rounded-xl border border-surface-container-highest/30 shadow-sm p-5 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-on-surface flex items-center gap-2">
@@ -338,6 +377,34 @@ export default function AdminDashboardPage() {
             ))}
             {tools.length === 0 && <p className="text-xs text-on-surface-variant py-2">Nenhuma ferramenta cadastrada.</p>}
           </div>
+        </div>
+
+        <div className="bg-surface-container-low rounded-xl border border-surface-container-highest/30 shadow-sm p-5 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-on-surface flex items-center gap-2">
+              <ShieldCheck size={16} className="text-secondary" /> Administradores
+            </h2>
+            <button type="button" onClick={handleAddAdmin} className="text-[10px] font-mono text-secondary flex items-center gap-1 hover:underline">
+              <Plus size={12} /> Promover
+            </button>
+          </div>
+          {adminsError ? (
+            <p className="text-xs text-on-surface-variant py-2">
+              Não foi possível carregar (rode a versão atualizada de supabase-schema.sql no seu projeto Supabase).
+            </p>
+          ) : (
+            <div className="flex flex-col divide-y divide-surface-container-high/60">
+              {admins.map(admin => (
+                <div key={admin.user_id} className="flex items-center justify-between py-2 gap-2">
+                  <span className="text-sm text-on-surface-variant truncate">{admin.email}</span>
+                  <button onClick={() => handleRemoveAdmin(admin)} className="p-1.5 rounded text-outline hover:text-error hover:bg-surface-container transition-colors shrink-0">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+              {admins.length === 0 && <p className="text-xs text-on-surface-variant py-2">Nenhum administrador encontrado.</p>}
+            </div>
+          )}
         </div>
       </div>
     </div>
