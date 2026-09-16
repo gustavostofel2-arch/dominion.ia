@@ -5,6 +5,7 @@ import { Copy, Check, Terminal, Heart, Film } from 'lucide-react';
 import clsx from 'clsx';
 import Image from 'next/image';
 import { YouTubeAutoplayEmbed } from './YouTubeAutoplayEmbed';
+import { NativeVideoAutoplay } from './NativeVideoAutoplay';
 
 export type PromptItem = {
   id: string;
@@ -56,13 +57,15 @@ export function PromptCard({ item }: { item: PromptItem }) {
         "relative overflow-hidden bg-surface-container-lowest select-none",
         isVideo ? "aspect-[9/16]" : "aspect-[16/10]"
       )}>
-        {isVideo && !ytId ? (
+        {isVideo && !item.media_url ? (
           <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-on-surface-variant p-4 text-center">
             <Film size={24} className="text-secondary" />
-            <span className="text-xs">Link do YouTube não reconhecido</span>
+            <span className="text-xs">Nenhum vídeo cadastrado</span>
           </div>
         ) : isVideo && ytId ? (
           <YouTubeAutoplayEmbed videoId={ytId} title={item.title} />
+        ) : isVideo ? (
+          <NativeVideoAutoplay src={item.media_url} title={item.title} />
         ) : (
           <Image
             src={item.media_url || 'https://picsum.photos/seed/placeholder/800/500'}

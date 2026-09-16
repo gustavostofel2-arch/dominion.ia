@@ -106,6 +106,21 @@ export default function AdminDashboardPage() {
     })();
   }, [fetchItems, fetchLookups, fetchAdmins]);
 
+  // Realtime: se outro admin cadastrar/editar/excluir algo em outra aba, esta
+  // também atualiza sozinha.
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-catalog-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => fetchItems(0))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'niches' }, () => fetchLookups())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tools' }, () => fetchLookups())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'engines' }, () => fetchLookups())
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchItems, fetchLookups]);
+
   const handleLoadMore = () => {
     const nextPage = page + 1;
     setPage(nextPage);

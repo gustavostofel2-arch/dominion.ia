@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Plus } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Link2, Upload, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 const supabase = createClient();
@@ -20,6 +20,8 @@ function AdminNovoItemContent() {
   const [niches, setNiches] = useState<Lookup[]>([]);
   const [tools, setTools] = useState<Lookup[]>([]);
   const [engines, setEngines] = useState<Lookup[]>([]);
+  const [mediaMode, setMediaMode] = useState<'link' | 'upload'>('link');
+  const [uploading, setUploading] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -73,6 +75,12 @@ function AdminNovoItemContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.media_url) {
+      alert('Selecione um link ou envie um arquivo de mídia antes de salvar.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -88,6 +96,26 @@ function AdminNovoItemContent() {
       alert('Erro ao salvar item.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop() || 'bin';
+      const path = `${formData.type}/${crypto.randomUUID()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('media').upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from('media').getPublicUrl(path);
+      setFormData(f => ({ ...f, media_url: data.publicUrl }));
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao enviar arquivo: ' + (error instanceof Error ? error.message : 'erro desconhecido'));
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -230,15 +258,71 @@ function AdminNovoItemContent() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-mono text-outline uppercase tracking-wider">URL da Mídia (YouTube URL ou Imagem)</label>
-          <input 
-            type="text" 
-            required
-            value={formData.media_url}
-            onChange={(e) => setFormData({...formData, media_url: e.target.value})}
-            className="px-4 py-2.5 bg-surface-container text-on-surface rounded-lg font-mono text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-            placeholder="https://..."
-          />
+          <div className="flex items-center justify-between">
+            <label className="text-[10px] font-mono text-outline uppercase tracking-wider">
+              Mídia ({formData.type === 'video' ? 'YouTube URL ou arquivo de vídeo' : 'URL ou arquivo de imagem'})
+            </label>
+            <div className="flex items-center rounded-lg bg-surface-container p-0.5 gap-0.5">
+              <button
+                type="button"
+                onClick={() => setMediaMode('link')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-mono transition-colors ${
+                  mediaMode === 'link' ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                <Link2 size={11} /> Link
+              </button>
+              <button
+                type="button"
+                onClick={() => setMediaMode('upload')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-mono transition-colors ${
+                  mediaMode === 'upload' ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                <Upload size={11} /> Upload
+              </button>
+            </div>
+          </div>
+
+          {mediaMode === 'link' ? (
+            <input
+              type="text"
+              required
+              value={formData.media_url}
+              onChange={(e) => setFormData({...formData, media_url: e.target.value})}
+              className="px-4 py-2.5 bg-surface-container text-on-surface rounded-lg font-mono text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder="https://..."
+            />
+          ) : (
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center justify-center gap-2 px-4 py-4 bg-surface-container border border-dashed border-surface-container-highest rounded-lg text-xs text-on-surface-variant hover:border-primary/50 hover:text-on-surface cursor-pointer transition-colors">
+                {uploading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={16} />
+                    Clique para escolher {formData.type === 'video' ? 'um vídeo' : 'uma imagem'}
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept={formData.type === 'video' ? 'video/*' : 'image/*'}
+                  disabled={uploading}
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void handleFileUpload(file);
+                  }}
+                />
+              </label>
+              {formData.media_url && (
+                <p className="text-[10px] font-mono text-secondary truncate">✓ {formData.media_url}</p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-1.5">

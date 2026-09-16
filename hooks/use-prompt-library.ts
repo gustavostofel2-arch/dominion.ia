@@ -69,17 +69,20 @@ export function usePromptLibrary(type: 'image' | 'video') {
     }
   }, [type]);
 
-  useEffect(() => {
-    async function loadNiches() {
-      try {
-        const { data } = await supabase.from('niches').select('*').order('name');
-        if (data) setNiches(data);
-      } catch (error) {
-        console.error('Falha ao carregar nichos:', error);
-      }
+  const loadNiches = useCallback(async () => {
+    try {
+      const { data } = await supabase.from('niches').select('*').order('name');
+      if (data) setNiches(data);
+    } catch (error) {
+      console.error('Falha ao carregar nichos:', error);
     }
-    void loadNiches();
   }, []);
+
+  useEffect(() => {
+    void (async () => {
+      await loadNiches();
+    })();
+  }, [loadNiches]);
 
   useEffect(() => {
     pageRef.current = 0;
@@ -87,6 +90,28 @@ export function usePromptLibrary(type: 'image' | 'video') {
       await fetchItems(0, activeNiche);
     })();
   }, [activeNiche, fetchItems]);
+
+  // Realtime: qualquer item deste tipo (imagem/vídeo) que for criado, editado
+  // ou excluído atualiza a listagem sozinha, sem precisar de F5.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`items-${type}-changes`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'items', filter: `type=eq.${type}` },
+        () => {
+          pageRef.current = 0;
+          void fetchItems(0, activeNiche);
+        }
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'niches' }, () => {
+        void loadNiches();
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [type, activeNiche, fetchItems, loadNiches]);
 
   const setActiveNiche = useCallback((niche: string) => {
     const params = new URLSearchParams(searchParams.toString());

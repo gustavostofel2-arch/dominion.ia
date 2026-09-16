@@ -244,6 +244,64 @@ DROP POLICY IF EXISTS "Escrita autenticada em itens" ON public.items;
 DROP POLICY IF EXISTS "Escrita admin em itens" ON public.items;
 CREATE POLICY "Escrita admin em itens" ON public.items FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 
+-- ============================================================================
+-- Supabase Storage: bucket "media" para upload de imagens/vídeos pelo admin
+-- ============================================================================
+-- Alternativa a colar uma URL externa: o admin pode fazer upload direto do
+-- arquivo, que fica hospedado no seu próprio projeto Supabase.
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('media', 'media', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Leitura pública de mídia" ON storage.objects;
+CREATE POLICY "Leitura pública de mídia" ON storage.objects
+  FOR SELECT USING (bucket_id = 'media');
+
+DROP POLICY IF EXISTS "Upload admin de mídia" ON storage.objects;
+CREATE POLICY "Upload admin de mídia" ON storage.objects
+  FOR INSERT WITH CHECK (bucket_id = 'media' AND public.is_admin());
+
+DROP POLICY IF EXISTS "Atualização admin de mídia" ON storage.objects;
+CREATE POLICY "Atualização admin de mídia" ON storage.objects
+  FOR UPDATE USING (bucket_id = 'media' AND public.is_admin());
+
+DROP POLICY IF EXISTS "Exclusão admin de mídia" ON storage.objects;
+CREATE POLICY "Exclusão admin de mídia" ON storage.objects
+  FOR DELETE USING (bucket_id = 'media' AND public.is_admin());
+
+-- ============================================================================
+-- Realtime: as páginas públicas e o admin passam a atualizar sozinhos quando
+-- alguém cadastra/edita/exclui um item, nicho, ferramenta ou motor —
+-- sem precisar dar F5.
+-- ============================================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'items'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.items;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'niches'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.niches;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'tools'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.tools;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'engines'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.engines;
+  END IF;
+END $$;
+
 -- Força o PostgREST a recarregar o cache de schema imediatamente. Sem isso,
 -- tabelas/colunas novas (como public.engines) só ficam visíveis pra API
 -- depois de alguns minutos (ou de um reload manual em Database > API),

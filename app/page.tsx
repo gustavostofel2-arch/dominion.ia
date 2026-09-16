@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Sparkles, Image as ImageIcon, Film } from 'lucide-react';
+import { Sparkles, Image as ImageIcon, Film, Layers } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { YouTubeAutoplayEmbed } from '@/components/YouTubeAutoplayEmbed';
+import { NativeVideoAutoplay } from '@/components/NativeVideoAutoplay';
 
 const supabase = createClient();
 
@@ -17,6 +18,8 @@ type FeedItem = {
   media_url: string;
   tool: { name: string } | null;
 };
+
+type FeedFilter = 'all' | 'image' | 'video';
 
 const getYouTubeId = (url: string) => {
   if (!url) return null;
@@ -36,8 +39,8 @@ const getYouTubeId = (url: string) => {
 };
 
 function FeedTile({ item }: { item: FeedItem }) {
-  const ytId = item.type === 'video' ? getYouTubeId(item.media_url) : null;
   const isVideo = item.type === 'video';
+  const ytId = isVideo ? getYouTubeId(item.media_url) : null;
 
   return (
     <Link
@@ -47,6 +50,8 @@ function FeedTile({ item }: { item: FeedItem }) {
       <div className={`relative w-full ${isVideo ? 'aspect-[9/16]' : 'aspect-[4/5]'}`}>
         {isVideo && ytId ? (
           <YouTubeAutoplayEmbed videoId={ytId} title={item.title} interactive={false} />
+        ) : isVideo ? (
+          <NativeVideoAutoplay src={item.media_url} title={item.title} interactive={false} />
         ) : (
           <Image
             src={item.media_url || 'https://picsum.photos/seed/placeholder/600/750'}
@@ -76,22 +81,62 @@ function FeedTile({ item }: { item: FeedItem }) {
 
 export default function Home() {
   const [feed, setFeed] = useState<FeedItem[]>([]);
+  const [feedFilter, setFeedFilter] = useState<FeedFilter>('all');
+  const [stats, setStats] = useState({ total: 0, images: 0, videos: 0 });
+
+  const loadFeed = useCallback(async (filter: FeedFilter) => {
+    try {
+      let query = supabase
+        .from('items')
+        .select('id, type, title, prompt_text, media_url, tool:tools(name)')
+        .order('created_at', { ascending: false })
+        .limit(12);
+      if (filter !== 'all') query = query.eq('type', filter);
+      const { data } = await query;
+      if (data) setFeed(data as unknown as FeedItem[]);
+    } catch (error) {
+      console.error('Falha ao carregar destaques:', error);
+    }
+  }, []);
+
+  const loadStats = useCallback(async () => {
+    try {
+      const [totalRes, imgRes, vidRes] = await Promise.all([
+        supabase.from('items').select('id', { count: 'exact', head: true }),
+        supabase.from('items').select('id', { count: 'exact', head: true }).eq('type', 'image'),
+        supabase.from('items').select('id', { count: 'exact', head: true }).eq('type', 'video'),
+      ]);
+      setStats({ total: totalRes.count || 0, images: imgRes.count || 0, videos: vidRes.count || 0 });
+    } catch (error) {
+      console.error('Falha ao carregar estatísticas:', error);
+    }
+  }, []);
 
   useEffect(() => {
-    async function loadFeed() {
-      try {
-        const { data } = await supabase
-          .from('items')
-          .select('id, type, title, prompt_text, media_url, tool:tools(name)')
-          .order('created_at', { ascending: false })
-          .limit(12);
-        if (data) setFeed(data as unknown as FeedItem[]);
-      } catch (error) {
-        console.error('Falha ao carregar destaques:', error);
-      }
-    }
-    void loadFeed();
-  }, []);
+    void (async () => {
+      await loadFeed(feedFilter);
+    })();
+  }, [feedFilter, loadFeed]);
+
+  useEffect(() => {
+    void (async () => {
+      await loadStats();
+    })();
+  }, [loadStats]);
+
+  // Realtime: qualquer insert/update/delete em items atualiza a Home sozinha.
+  useEffect(() => {
+    const channel = supabase
+      .channel('home-items-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => {
+        void loadFeed(feedFilter);
+        void loadStats();
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [feedFilter, loadFeed, loadStats]);
 
   return (
     <div className="flex flex-col gap-8 max-w-5xl mx-auto w-full">
@@ -114,6 +159,11 @@ export default function Home() {
           <p className="text-base md:text-lg text-on-surface-variant leading-relaxed">
             Engenharia reversa e receitas de prompts testadas para Magnific AI, VO3, Midjourney e Runway. Copie com um clique e produza visuais de nível internacional.
           </p>
+          <div className="flex flex-wrap items-center gap-4 pt-2 text-xs font-mono text-on-surface-variant">
+            <span className="flex items-center gap-1.5"><Layers size={14} className="text-primary" /> {stats.total} prompts</span>
+            <span className="flex items-center gap-1.5"><ImageIcon size={14} className="text-primary" /> {stats.images} imagens</span>
+            <span className="flex items-center gap-1.5"><Film size={14} className="text-secondary" /> {stats.videos} vídeos</span>
+          </div>
         </div>
       </section>
 
@@ -186,19 +236,44 @@ export default function Home() {
       </section>
 
       {/* Mixed feed of recent images/videos */}
-      {feed.length > 0 && (
-        <section className="flex flex-col gap-4">
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(255,95,216,0.9)]"></span>
             <h2 className="text-lg font-semibold text-on-surface">Recém-adicionados</h2>
           </div>
+          <div className="flex items-center gap-2">
+            {([
+              { key: 'all', label: 'Todos' },
+              { key: 'image', label: 'Imagem' },
+              { key: 'video', label: 'Vídeo' },
+            ] as const).map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => setFeedFilter(opt.key)}
+                className={`px-3 py-1 rounded-full font-mono text-xs transition-all ${
+                  feedFilter === opt.key
+                    ? 'bg-primary-container text-on-primary-container font-semibold'
+                    : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {feed.length === 0 ? (
+          <div className="py-12 text-center text-on-surface-variant bg-surface-container-low rounded-xl border border-surface-container-high border-dashed">
+            Nenhum item encontrado.
+          </div>
+        ) : (
           <div className="columns-2 md:columns-3 lg:columns-4 gap-4">
             {feed.map(item => (
               <FeedTile key={item.id} item={item} />
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </div>
   );
 }
