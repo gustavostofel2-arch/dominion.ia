@@ -23,8 +23,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="pt-BR" className={`dark ${geist.variable} ${jetbrainsMono.variable}`}>
-      <body suppressHydrationWarning className="bg-surface-container-lowest text-on-surface antialiased font-sans">
+    <html lang="pt-BR" className={`${geist.variable} ${jetbrainsMono.variable}`} style={{colorScheme: 'light'}}>
+      <body suppressHydrationWarning className="text-on-surface antialiased font-sans">
         <SidebarProvider>
           <Sidebar />
           <ContentWrapper>

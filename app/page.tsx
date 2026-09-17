@@ -202,7 +202,7 @@ export default function Home() {
       <section className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(255,95,216,0.9)]"></span>
+            <span className="inline-block w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(254,44,85,0.9)]"></span>
             <h2 className="text-lg font-semibold text-on-surface">Recém-adicionados</h2>
           </div>
           <div className="flex items-center gap-2">

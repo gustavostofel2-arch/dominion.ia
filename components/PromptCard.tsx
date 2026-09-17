@@ -122,7 +122,7 @@ export function PromptCard({ item }: { item: PromptItem }) {
             className={clsx(
               "w-full py-2 px-3 rounded-lg font-mono text-xs font-semibold flex items-center justify-center gap-2 transition-all duration-200 shadow-sm active:scale-[0.98]",
               copied 
-                ? "bg-secondary-container text-on-secondary-container shadow-[0_0_16px_rgba(0,166,224,0.4)]" 
+                ? "bg-secondary-container text-on-secondary-container shadow-[0_0_16px_rgba(37,244,238,0.4)]" 
                 : "bg-surface-container hover:bg-primary-container hover:text-on-primary-container text-on-surface-variant"
             )}
           >

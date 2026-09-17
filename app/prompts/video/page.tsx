@@ -13,7 +13,7 @@ function PromptsVideoContent() {
 
       <div className="flex flex-col gap-2 max-w-2xl">
         <div className="flex items-center gap-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-secondary shadow-[0_0_10px_rgba(123,208,255,0.9)]"></span>
+          <span className="inline-block w-2 h-2 rounded-full bg-secondary shadow-[0_0_10px_rgba(37,244,238,0.9)]"></span>
           <span className="text-[10px] font-mono text-secondary uppercase tracking-widest font-semibold">Motion Synthesis</span>
         </div>
         <h1 className="text-3xl font-semibold text-on-surface tracking-tight">Prompts de Vídeo</h1>
@@ -27,7 +27,7 @@ function PromptsVideoContent() {
             onClick={() => setActiveNiche('all')}
             className={`shrink-0 px-4 py-1.5 rounded-full font-mono text-xs transition-all flex items-center gap-1.5 ${
               activeNiche === 'all'
-                ? 'bg-secondary-container text-on-secondary-container font-semibold shadow-[0_0_16px_rgba(0,166,224,0.25)]'
+                ? 'bg-secondary-container text-on-secondary-container font-semibold shadow-[0_0_16px_rgba(37,244,238,0.25)]'
                 : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
             }`}
           >
@@ -40,7 +40,7 @@ function PromptsVideoContent() {
               onClick={() => setActiveNiche(niche.id)}
               className={`shrink-0 px-4 py-1.5 rounded-full font-mono text-xs transition-all flex items-center gap-1.5 ${
                 activeNiche === niche.id
-                  ? 'bg-secondary-container text-on-secondary-container font-semibold shadow-[0_0_16px_rgba(0,166,224,0.25)]'
+                  ? 'bg-secondary-container text-on-secondary-container font-semibold shadow-[0_0_16px_rgba(37,244,238,0.25)]'
                   : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
               }`}
             >

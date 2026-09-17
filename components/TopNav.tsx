@@ -108,7 +108,7 @@ export function TopNav() {
       <div className="flex items-center gap-2 md:gap-4 ml-auto">
         <button type="button" className="text-on-surface-variant hover:text-on-surface hover:bg-surface-container p-2 rounded-lg transition-colors relative" title="Notificações">
           <Bell size={20} />
-          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-container shadow-[0_0_6px_rgba(255,95,216,0.7)]"></span>
+          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-container shadow-[0_0_6px_rgba(254,44,85,0.7)]"></span>
         </button>
         <button type="button" className="text-on-surface-variant hover:text-on-surface hover:bg-surface-container p-2 rounded-lg transition-colors" title="Coleções salvas">
           <Bookmark size={20} />

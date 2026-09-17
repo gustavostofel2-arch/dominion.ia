@@ -71,7 +71,7 @@ export function Sidebar() {
                   className={clsx(
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm w-full",
                     isActive
-                      ? "bg-primary-container text-on-primary-container font-semibold shadow-[0_0_16px_rgba(255,95,216,0.25)]"
+                      ? "bg-primary-container text-on-primary-container font-semibold shadow-[0_0_16px_rgba(254,44,85,0.25)]"
                       : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface",
                     isCollapsed ? "justify-center" : "justify-start"
                   )}
@@ -110,7 +110,7 @@ export function Sidebar() {
           {!isCollapsed && (
             <div className="pt-2 flex items-center justify-between px-1 mt-2 border-t border-surface-container">
               <div className="flex items-center gap-2">
-                <span className="inline-block w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_rgba(123,208,255,0.8)]"></span>
+                <span className="inline-block w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_rgba(37,244,238,0.8)]"></span>
                 <span className="text-[11px] text-outline uppercase font-medium tracking-wider">v2.4 Pro</span>
               </div>
             </div>

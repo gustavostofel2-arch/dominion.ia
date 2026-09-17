@@ -13,7 +13,7 @@ function PromptsImagemContent() {
 
       <div className="flex flex-col gap-2 max-w-2xl">
         <div className="flex items-center gap-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(255,95,216,0.9)]"></span>
+          <span className="inline-block w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(254,44,85,0.9)]"></span>
           <span className="text-[10px] font-mono text-primary uppercase tracking-widest font-semibold">Repositório Neural</span>
         </div>
         <h1 className="text-3xl font-semibold text-on-surface tracking-tight">Prompts de Imagem</h1>
@@ -27,7 +27,7 @@ function PromptsImagemContent() {
             onClick={() => setActiveNiche('all')}
             className={`shrink-0 px-4 py-1.5 rounded-full font-mono text-xs transition-all flex items-center gap-1.5 ${
               activeNiche === 'all'
-                ? 'bg-primary-container text-on-primary-container font-semibold shadow-[0_0_16px_rgba(255,95,216,0.25)]'
+                ? 'bg-primary-container text-on-primary-container font-semibold shadow-[0_0_16px_rgba(254,44,85,0.25)]'
                 : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
             }`}
           >
@@ -40,7 +40,7 @@ function PromptsImagemContent() {
               onClick={() => setActiveNiche(niche.id)}
               className={`shrink-0 px-4 py-1.5 rounded-full font-mono text-xs transition-all flex items-center gap-1.5 ${
                 activeNiche === niche.id
-                  ? 'bg-primary-container text-on-primary-container font-semibold shadow-[0_0_16px_rgba(255,95,216,0.25)]'
+                  ? 'bg-primary-container text-on-primary-container font-semibold shadow-[0_0_16px_rgba(254,44,85,0.25)]'
                   : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
               }`}
             >

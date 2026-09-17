@@ -1,42 +1,51 @@
 @import "tailwindcss";
 
 @theme {
-  --color-surface-container-lowest: #0c0e14;
-  --color-surface-container-low: #191b22;
-  --color-surface-container: #1e1f26;
-  --color-surface-container-high: #282a30;
-  --color-surface-container-highest: #33343b;
-  --color-surface-bright: #373940;
-  
-  --color-on-surface: #e2e2eb;
-  --color-on-surface-variant: #cbc3d7;
-  --color-outline: #958ea0;
-  --color-outline-variant: #494454;
-  
-  --color-primary: #ff5fd8;
-  --color-on-primary: #560033;
-  --color-primary-container: #e838b8;
-  --color-on-primary-container: #ffe0f2;
-  --color-primary-fixed-dim: #ff5fd8;
+  /* Clean, light surface — off-white page, pure white cards */
+  --color-surface-container-lowest: #f5f4f0;
+  --color-surface-container-low: #ffffff;
+  --color-surface-container: #f1f0ec;
+  --color-surface-container-high: #e8e6e1;
+  --color-surface-container-highest: #dedcd6;
+  --color-surface-bright: #ffffff;
 
-  --color-secondary: #4fe3ff;
-  --color-on-secondary: #00323d;
-  --color-secondary-container: #00b8dd;
-  --color-on-secondary-container: #00232a;
-  
-  --color-tertiary: #c0c1ff;
-  --color-on-tertiary: #1000a9;
-  --color-tertiary-container: #8083ff;
-  --color-on-tertiary-container: #0d0096;
-  
-  --color-error: #ffb4ab;
-  --color-on-error: #690005;
-  --color-error-container: #93000a;
-  --color-on-error-container: #ffdad6;
+  --color-on-surface: #18181b;
+  --color-on-surface-variant: #52525b;
+  --color-outline: #a8a29e;
+  --color-outline-variant: #e7e5e0;
+
+  /* TikTok pink/red */
+  --color-primary: #fe2c55;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #fe2c55;
+  --color-on-primary-container: #ffffff;
+  --color-primary-fixed-dim: #fe2c55;
+
+  /* TikTok cyan */
+  --color-secondary: #0c8c86;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #25f4ee;
+  --color-on-secondary-container: #003733;
+
+  --color-tertiary: #7c5cff;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #ede9fe;
+  --color-on-tertiary-container: #4c1d95;
+
+  --color-error: #dc2626;
+  --color-on-error: #ffffff;
+  --color-error-container: #fee2e2;
+  --color-on-error-container: #7f1d1d;
 }
 
 @layer base {
   body {
-    @apply bg-surface-container-lowest text-on-surface antialiased;
+    @apply text-on-surface antialiased;
+    background-color: var(--color-surface-container-lowest);
+    background-image:
+      linear-gradient(to right, rgba(24, 24, 27, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(24, 24, 27, 0.05) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-attachment: fixed;
   }
 }
