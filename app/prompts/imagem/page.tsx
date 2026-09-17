@@ -17,7 +17,7 @@ function PromptsImagemContent() {
           <span className="text-[10px] font-mono text-primary uppercase tracking-widest font-semibold">Repositório Neural</span>
         </div>
         <h1 className="text-3xl font-semibold text-on-surface tracking-tight">Prompts de Imagem</h1>
-        <p className="text-on-surface-variant">Matriz curada de fórmulas sintéticas calibradas para Midjourney v6, Magnific AI, FLUX.1 e DALL-E 3 com consistência fotorealista.</p>
+        <p className="text-on-surface-variant">Matriz curada de fórmulas sintéticas no formato 9:16, com consistência fotorealista.</p>
       </div>
 
       {/* Filter Bar */}

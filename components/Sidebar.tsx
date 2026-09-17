@@ -46,7 +46,6 @@ export function Sidebar() {
                 <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center shrink-0">
                   <span className="font-bold text-primary text-xl">D</span>
                 </div>
-                <span className="font-semibold text-lg tracking-tight text-on-surface truncate">Dominion</span>
               </div>
               <button
                 onClick={() => setIsCollapsed(true)}

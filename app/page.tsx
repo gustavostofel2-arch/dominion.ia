@@ -16,7 +16,6 @@ type FeedItem = {
   title: string;
   prompt_text: string;
   media_url: string;
-  tool: { name: string } | null;
 };
 
 type FeedFilter = 'all' | 'image' | 'video';
@@ -47,7 +46,7 @@ function FeedTile({ item }: { item: FeedItem }) {
       href={isVideo ? '/prompts/video' : '/prompts/imagem'}
       className="group block w-full break-inside-avoid mb-4 rounded-xl overflow-hidden bg-surface-container-low border border-surface-container-highest/30 shadow-lg hover:shadow-2xl transition-all duration-300"
     >
-      <div className={`relative w-full ${isVideo ? 'aspect-[9/16]' : 'aspect-[4/5]'}`}>
+      <div className="relative w-full aspect-[9/16]">
         {isVideo && ytId ? (
           <YouTubeAutoplayEmbed videoId={ytId} title={item.title} interactive={false} />
         ) : isVideo ? (
@@ -62,14 +61,6 @@ function FeedTile({ item }: { item: FeedItem }) {
             className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
           />
         )}
-        <div className="absolute top-2 left-2 z-10 pointer-events-none">
-          <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider font-semibold backdrop-blur-md flex items-center gap-1 ${
-            isVideo ? 'bg-secondary/15 text-secondary' : 'bg-primary-container/20 text-primary'
-          }`}>
-            {isVideo ? <Film size={10} /> : <ImageIcon size={10} />}
-            {item.tool?.name || (isVideo ? 'Vídeo' : 'Imagem')}
-          </span>
-        </div>
       </div>
       <div className="p-3 flex flex-col gap-0.5">
         <span className="text-sm font-semibold text-on-surface truncate">{item.title}</span>
@@ -88,7 +79,7 @@ export default function Home() {
     try {
       let query = supabase
         .from('items')
-        .select('id, type, title, prompt_text, media_url, tool:tools(name)')
+        .select('id, type, title, prompt_text, media_url')
         .order('created_at', { ascending: false })
         .limit(12);
       if (filter !== 'all') query = query.eq('type', filter);
@@ -154,7 +145,7 @@ export default function Home() {
             Biblioteca Master de Prompts
           </h1>
           <p className="text-base md:text-lg text-on-surface-variant leading-relaxed">
-            Engenharia reversa e receitas de prompts testadas para Magnific AI, VO3, Midjourney e Runway. Copie com um clique e produza visuais de nível internacional.
+            Engenharia reversa e receitas de prompts testadas, prontas pra rodar no TikTok. Copie com um clique e produza visuais de nível internacional.
           </p>
           <div className="flex flex-wrap items-center gap-4 pt-2 text-xs font-mono text-on-surface-variant">
             <span className="flex items-center gap-1.5"><Layers size={14} className="text-primary" /> {stats.total} prompts</span>
@@ -180,7 +171,7 @@ export default function Home() {
                 Prompts de Imagem
               </h2>
               <p className="text-on-surface-variant leading-relaxed">
-                Prompts calibrados para Midjourney v6, Magnific AI e DALL·E 3. De retratos editoriais hiper-realistas a produtos de luxo.
+                Fórmulas calibradas para gerar imagens no formato 9:16, de retratos editoriais hiper-realistas a produtos de luxo.
               </p>
             </div>
           </div>
@@ -200,7 +191,7 @@ export default function Home() {
                 Prompts de Vídeo
               </h2>
               <p className="text-on-surface-variant leading-relaxed">
-                Parâmetros de movimento, prompts cinemáticos e frame guidance para VO3, Sora e Runway Gen-3 com controle de câmera.
+                Parâmetros de movimento, prompts cinemáticos e frame guidance verticais, prontos pra rodar como conteúdo real.
               </p>
             </div>
           </div>

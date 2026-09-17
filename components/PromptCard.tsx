@@ -53,10 +53,7 @@ export function PromptCard({ item }: { item: PromptItem }) {
     <div className="group flex flex-col bg-surface-container-low rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border border-surface-container-highest/50 hover:border-primary/20">
       
       {/* Media Frame */}
-      <div className={clsx(
-        "relative overflow-hidden bg-surface-container-lowest select-none",
-        isVideo ? "aspect-[9/16]" : "aspect-[16/10]"
-      )}>
+      <div className="relative overflow-hidden bg-surface-container-lowest select-none aspect-[9/16]">
         {isVideo && !item.media_url ? (
           <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-on-surface-variant p-4 text-center">
             <Film size={24} className="text-secondary" />
@@ -82,17 +79,6 @@ export function PromptCard({ item }: { item: PromptItem }) {
         
         {/* Top Badges */}
         <div className="absolute top-2 left-2 right-11 flex flex-wrap items-center gap-1.5 z-10 pointer-events-none">
-          <span className={clsx(
-            "px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider font-semibold backdrop-blur-md",
-            isVideo ? "bg-secondary/15 text-secondary" : "bg-primary-container/20 text-primary"
-          )}>
-            {item.tool?.name || 'Ferramenta'}
-          </span>
-          {item.engine?.name && (
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-tertiary/15 text-tertiary backdrop-blur-md">
-              {item.engine.name}
-            </span>
-          )}
           <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-surface-container-highest/80 text-on-surface backdrop-blur-md">
             {item.niche?.name || 'Nicho'}
           </span>
