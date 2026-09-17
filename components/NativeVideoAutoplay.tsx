@@ -25,12 +25,18 @@ export function NativeVideoAutoplay({ src, title, interactive = true }: { src: s
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    // Set the DOM property imperatively (not just the JSX attribute) right
+    // before play(): browsers only allow unattended autoplay when the video
+    // is actually muted at the moment play() runs, and React's `muted` prop
+    // doesn't reliably sync in time on initial mount, which silently blocks
+    // autoplay and leaves the video frozen on its first (often black) frame.
+    video.muted = muted;
     if (inView && !paused) {
       video.play().catch(() => {});
     } else {
       video.pause();
     }
-  }, [inView, paused]);
+  }, [inView, paused, muted]);
 
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();

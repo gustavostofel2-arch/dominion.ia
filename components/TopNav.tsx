@@ -1,8 +1,16 @@
+'use client';
+
 import { Search, Bell, Bookmark } from 'lucide-react';
+import clsx from 'clsx';
+import { useSidebar } from './SidebarProvider';
 
 export function TopNav() {
+  const { collapsed } = useSidebar();
   return (
-    <header className="fixed top-0 left-0 lg:left-64 right-0 h-16 bg-surface-container-lowest/80 backdrop-blur-xl z-40 px-4 md:px-8 flex items-center justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)] transition-all duration-300">
+    <header className={clsx(
+      "fixed top-0 left-0 right-0 h-16 bg-surface-container-lowest/80 backdrop-blur-xl z-40 px-4 md:px-8 flex items-center justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)] transition-all duration-300",
+      collapsed ? "lg:left-20" : "lg:left-64"
+    )}>
       <div className="flex items-center gap-4 w-full max-w-lg">
         <div className="relative w-full flex items-center hidden sm:flex">
           <Search size={18} className="absolute left-3 text-on-surface-variant pointer-events-none" />

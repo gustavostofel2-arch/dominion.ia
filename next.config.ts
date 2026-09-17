@@ -39,11 +39,17 @@ const nextConfig: NextConfig = {
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https:",
               "frame-src https://www.youtube.com https://youtube.com",
+              // Vídeos enviados por upload (Supabase Storage) ou linkados de
+              // qualquer host externo passam por media-src, não img-src —
+              // sem isso o <video> nem tentava carregar (ficava "tudo preto").
+              "media-src 'self' https:",
               // Precisa de https: amplo (não só o domínio do Supabase) porque
               // o admin pode cadastrar qualquer URL de imagem externa, e o
               // next/image + as miniaturas do YouTube (img.youtube.com)
               // contam como conexão (fetch/XHR) para o navegador, não só img-src.
-              "connect-src 'self' https:",
+              // wss: é necessário pro Supabase Realtime (WebSocket) — connect-src
+              // não trata "https:" como cobrindo "wss:", são esquemas distintos.
+              "connect-src 'self' https: wss:",
             ].join('; '),
           },
         ],

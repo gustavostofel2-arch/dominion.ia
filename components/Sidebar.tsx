@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
 import { Menu, X, LayoutGrid, Image as ImageIcon, Film, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
+import { useSidebar } from './SidebarProvider';
 
 export function Sidebar() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { collapsed: isCollapsed, setCollapsed: setIsCollapsed } = useSidebar();
   const pathname = usePathname();
 
   const navItems = [
@@ -27,28 +27,36 @@ export function Sidebar() {
         )}
       >
         <div className="flex flex-col w-full">
-          <div className="h-16 px-4 flex items-center justify-between gap-2">
-            {!isCollapsed && (
+          {isCollapsed ? (
+            <div className="h-16 flex flex-col items-center justify-center gap-1.5">
+              <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center shrink-0">
+                <span className="font-bold text-primary text-xl">D</span>
+              </div>
+              <button
+                onClick={() => setIsCollapsed(false)}
+                className="text-on-surface-variant hover:text-on-surface hover:bg-surface-container p-1 rounded transition-colors shrink-0"
+                title="Expandir barra lateral"
+              >
+                <Menu size={16} />
+              </button>
+            </div>
+          ) : (
+            <div className="h-16 px-4 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 overflow-hidden">
                 <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center shrink-0">
                   <span className="font-bold text-primary text-xl">D</span>
                 </div>
                 <span className="font-semibold text-lg tracking-tight text-on-surface truncate">Dominion</span>
               </div>
-            )}
-            {isCollapsed && (
-               <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center shrink-0 mx-auto">
-                 <span className="font-bold text-primary text-xl">D</span>
-               </div>
-            )}
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="text-on-surface-variant hover:text-on-surface hover:bg-surface-container p-1.5 rounded transition-colors shrink-0"
-              title="Recolher barra lateral"
-            >
-              {isCollapsed ? <Menu size={20} /> : <X size={20} />}
-            </button>
-          </div>
+              <button
+                onClick={() => setIsCollapsed(true)}
+                className="text-on-surface-variant hover:text-on-surface hover:bg-surface-container p-1.5 rounded transition-colors shrink-0"
+                title="Recolher barra lateral"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          )}
 
           <div className={clsx("px-4 pt-4 pb-2 transition-opacity duration-200", isCollapsed ? "opacity-0" : "opacity-100")}>
             {!isCollapsed && <span className="text-[11px] font-medium text-outline uppercase tracking-wider">Biblioteca</span>}

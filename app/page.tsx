@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Sparkles, Image as ImageIcon, Film, Layers } from 'lucide-react';
+import { Image as ImageIcon, Film, Layers } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { YouTubeAutoplayEmbed } from '@/components/YouTubeAutoplayEmbed';
 import { NativeVideoAutoplay } from '@/components/NativeVideoAutoplay';
@@ -145,9 +145,6 @@ export default function Home() {
         <div className="absolute -right-24 -top-24 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="relative z-10 flex flex-col gap-4 max-w-2xl">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono px-2 py-1 rounded bg-primary-container/20 text-primary uppercase tracking-wider border border-primary/20">
-              Dominion Vault
-            </span>
             <span className="text-xs font-mono text-outline flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
               Sincronizado
@@ -186,10 +183,6 @@ export default function Home() {
                 Prompts calibrados para Midjourney v6, Magnific AI e DALL·E 3. De retratos editoriais hiper-realistas a produtos de luxo.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2 pt-2">
-              <span className="text-xs font-mono px-2.5 py-1 rounded bg-surface-container text-on-surface">Midjourney v6</span>
-              <span className="text-xs font-mono px-2.5 py-1 rounded bg-surface-container text-on-surface">Magnific AI</span>
-            </div>
           </div>
         </Link>
 
@@ -210,29 +203,8 @@ export default function Home() {
                 Parâmetros de movimento, prompts cinemáticos e frame guidance para VO3, Sora e Runway Gen-3 com controle de câmera.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2 pt-2">
-              <span className="text-xs font-mono px-2.5 py-1 rounded bg-surface-container text-on-surface">VO3 Video</span>
-              <span className="text-xs font-mono px-2.5 py-1 rounded bg-surface-container text-on-surface">Runway Gen-3</span>
-            </div>
           </div>
         </Link>
-      </section>
-
-      {/* Mini Tip section */}
-      <section className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 rounded-xl bg-surface-container-low gap-4 border border-surface-container-highest/30">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary shrink-0">
-            <Sparkles size={20} />
-          </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-secondary uppercase font-semibold">Dica da Mentoria Semanal</span>
-            </div>
-            <p className="text-sm text-on-surface-variant mt-1">
-              Sempre estruture: <code className="text-primary font-mono bg-surface-container px-1 rounded">[Sujeito]</code> + <code className="text-secondary font-mono bg-surface-container px-1 rounded">[Iluminação]</code> + <code className="text-tertiary font-mono bg-surface-container px-1 rounded">[Câmera]</code> + <code className="text-on-surface font-mono bg-surface-container px-1 rounded">[Motor]</code>
-            </p>
-          </div>
-        </div>
       </section>
 
       {/* Mixed feed of recent images/videos */}
