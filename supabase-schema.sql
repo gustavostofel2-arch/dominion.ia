@@ -455,9 +455,15 @@ GRANT EXECUTE ON FUNCTION public.toggle_favorite(TEXT, UUID) TO anon, authentica
 -- ============================================================================
 -- Primeiro acesso de administrador: a própria pessoa cria a senha
 -- ============================================================================
--- admin_can_claim: o e-mail está marcado como admin em members e ainda não tem
--- conta com senha? (usado pela tela /admin/login antes de enviar o link)
-CREATE OR REPLACE FUNCTION public.admin_can_claim(p_email TEXT)
+-- Ao marcar um membro como admin, o painel gera um código de uso único
+-- (members.admin_code). A pessoa informa e-mail + código + a senha que quer em
+-- /admin/login; o código é conferido aqui antes de qualquer conta ser criada.
+ALTER TABLE public.members ADD COLUMN IF NOT EXISTS admin_code TEXT;
+
+DROP FUNCTION IF EXISTS public.admin_can_claim(TEXT);
+DROP FUNCTION IF EXISTS public.claim_admin();
+
+CREATE OR REPLACE FUNCTION public.admin_code_valid(p_email TEXT, p_code TEXT)
 RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
@@ -465,16 +471,17 @@ SET search_path = public
 STABLE
 AS $$
   SELECT EXISTS (
-    SELECT 1 FROM public.members WHERE email = lower(trim(p_email)) AND role = 'admin'
-  ) AND NOT EXISTS (
-    SELECT 1 FROM auth.users
-    WHERE lower(email) = lower(trim(p_email)) AND COALESCE(encrypted_password, '') <> ''
+    SELECT 1 FROM public.members
+    WHERE email = lower(trim(p_email))
+      AND role = 'admin'
+      AND admin_code IS NOT NULL
+      AND upper(admin_code) = upper(trim(p_code))
   );
 $$;
 
--- claim_admin: quem está logado (e-mail confirmado pelo link) e foi marcado como
--- admin em members entra em public.admins.
-CREATE OR REPLACE FUNCTION public.claim_admin()
+-- Quem acabou de criar a conta (logado) usa o código para entrar em
+-- public.admins. O código é apagado ao ser usado.
+CREATE OR REPLACE FUNCTION public.claim_admin(p_code TEXT)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -488,11 +495,16 @@ BEGIN
     RAISE EXCEPTION 'not authorized';
   END IF;
 
-  SELECT lower(u.email) INTO mail
-  FROM auth.users u
-  WHERE u.id = uid AND u.email_confirmed_at IS NOT NULL;
+  SELECT lower(u.email) INTO mail FROM auth.users u WHERE u.id = uid;
 
-  IF mail IS NULL OR NOT EXISTS (SELECT 1 FROM public.members WHERE email = mail AND role = 'admin') THEN
+  UPDATE public.members
+  SET admin_code = NULL
+  WHERE email = mail
+    AND role = 'admin'
+    AND admin_code IS NOT NULL
+    AND upper(admin_code) = upper(trim(p_code));
+
+  IF NOT FOUND THEN
     RAISE EXCEPTION 'not authorized';
   END IF;
 
@@ -500,10 +512,10 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.admin_can_claim(TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.admin_can_claim(TEXT) TO anon, authenticated;
-REVOKE ALL ON FUNCTION public.claim_admin() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.claim_admin() TO authenticated;
+REVOKE ALL ON FUNCTION public.admin_code_valid(TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.admin_code_valid(TEXT, TEXT) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.claim_admin(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.claim_admin(TEXT) TO authenticated;
 
 -- Força o PostgREST a recarregar o cache de schema imediatamente. Sem isso,
 -- tabelas/colunas novas (como public.engines) só ficam visíveis pra API

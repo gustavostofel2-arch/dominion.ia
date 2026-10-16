@@ -25,7 +25,7 @@ type Item = {
 
 type Lookup = { id: string; name: string };
 type AdminUser = { user_id: string; email: string; created_at: string };
-type MemberRow = { email: string; name: string | null; role: 'user' | 'admin'; last_access_at: string };
+type MemberRow = { email: string; name: string | null; role: 'user' | 'admin'; last_access_at: string; admin_code: string | null };
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -106,7 +106,7 @@ export default function AdminDashboardPage() {
     try {
       const { data } = await supabase
         .from('members')
-        .select('email, name, role, last_access_at')
+        .select('email, name, role, last_access_at, admin_code')
         .order('created_at', { ascending: false })
         .limit(1000);
       setMembers((data as MemberRow[] | null) || []);
@@ -270,43 +270,45 @@ export default function AdminDashboardPage() {
     fetchAdmins();
   };
 
-  // Keeps the password-protected admin list (public.admins) in step with the member role.
-  const syncAdminAccess = async (email: string, role: 'user' | 'admin') => {
-    if (role === 'admin') {
-      const { error } = await supabase.rpc('add_admin_by_email', { target_email: email });
-      if (error) {
-        alert('Marcado como administrador. No primeiro acesso ao painel (Área Admin), essa pessoa clica em "Primeiro acesso de administrador? Criar minha senha" e define a própria senha pelo link enviado ao e-mail dela.');
-      }
-    } else {
-      const { error } = await supabase.rpc('remove_admin_by_email', { target_email: email });
-      if (error && error.message.includes('último')) {
-        alert('Esta é a única conta de administrador com senha, então o acesso ao painel foi mantido.');
-      }
-    }
-    fetchAdmins();
+  // One-time code the new admin types on the panel login to create their own
+  // password; shown to whoever administers the system so they can pass it on.
+  const generateInviteCode = () => {
+    const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    const bytes = crypto.getRandomValues(new Uint8Array(8));
+    const chars = Array.from(bytes, b => alphabet[b % alphabet.length]).join('');
+    return `${chars.slice(0, 4)}-${chars.slice(4)}`;
   };
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     const email = newMemberEmail.trim().toLowerCase();
-    const { error } = await supabase.from('members').insert([{ email, role: newMemberRole }]);
+    const admin_code = newMemberRole === 'admin' ? generateInviteCode() : null;
+    const { error } = await supabase.from('members').insert([{ email, role: newMemberRole, admin_code }]);
     if (error) {
       alert(error.code === '23505' ? 'Este e-mail já está cadastrado.' : 'Erro ao cadastrar: ' + error.message);
       return;
     }
-    if (newMemberRole === 'admin') await syncAdminAccess(email, 'admin');
     setNewMemberEmail('');
     setNewMemberRole('user');
     fetchMembers();
   };
 
   const handleChangeRole = async (member: MemberRow, role: 'user' | 'admin') => {
-    const { error } = await supabase.from('members').update({ role }).eq('email', member.email);
+    const { error } = await supabase
+      .from('members')
+      .update({ role, admin_code: role === 'admin' ? generateInviteCode() : null })
+      .eq('email', member.email);
     if (error) {
       alert('Erro ao alterar perfil: ' + error.message);
       return;
     }
-    await syncAdminAccess(member.email, role);
+    if (role === 'user') {
+      const { error: removeError } = await supabase.rpc('remove_admin_by_email', { target_email: member.email });
+      if (removeError && removeError.message.includes('último')) {
+        alert('Esta é a única conta de administrador com senha, então o acesso ao painel foi mantido.');
+      }
+      fetchAdmins();
+    }
     fetchMembers();
   };
 
@@ -317,7 +319,10 @@ export default function AdminDashboardPage() {
       alert('Erro ao remover: ' + error.message);
       return;
     }
-    if (member.role === 'admin') await syncAdminAccess(member.email, 'user');
+    if (member.role === 'admin') {
+      await supabase.rpc('remove_admin_by_email', { target_email: member.email });
+      fetchAdmins();
+    }
     fetchMembers();
   };
 
@@ -591,7 +596,7 @@ export default function AdminDashboardPage() {
             </button>
           </form>
           <p className="text-[11px] text-on-surface-variant">
-            Só e-mails cadastrados aqui conseguem entrar; no primeiro acesso a pessoa informa o nome. &quot;Administrador&quot; libera o menu Admin, mas para abrir o painel ainda é preciso a senha (conta criada em Supabase &gt; Authentication).
+            Só e-mails cadastrados aqui conseguem entrar; no primeiro acesso a pessoa informa o nome. &quot;Administrador&quot; libera o menu Admin e gera um código de convite (aparece abaixo do e-mail): a pessoa usa esse código em &quot;Primeiro acesso de administrador&quot; na tela do painel para criar a própria senha. O código vale uma vez.
           </p>
 
           <div className="flex flex-col divide-y divide-surface-container-high/60">
@@ -600,6 +605,19 @@ export default function AdminDashboardPage() {
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm text-on-surface truncate">{m.name || 'Aguardando primeiro acesso'}</span>
                   <span className="text-xs text-on-surface-variant truncate">{m.email}</span>
+                  {m.role === 'admin' && m.admin_code && (
+                    <span className="text-[11px] text-secondary mt-0.5">
+                      Código para criar a senha do painel:{' '}
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard.writeText(m.admin_code!)}
+                        className="font-mono font-semibold bg-secondary-container/40 px-1.5 py-0.5 rounded hover:bg-secondary-container/70 transition-colors"
+                        title="Copiar código"
+                      >
+                        {m.admin_code}
+                      </button>
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-[10px] font-mono text-outline hidden md:block">

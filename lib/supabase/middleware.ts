@@ -39,11 +39,8 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAdminRoute = pathname.startsWith('/admin');
   const isLoginRoute = pathname === '/admin/login';
-  // The set-password page is reached from an e-mailed link by someone who is
-  // not an admin yet; it grants nothing by itself (claim_admin() checks the DB).
-  const isPublicAdminRoute = isLoginRoute || pathname === '/admin/definir-senha';
 
-  if (isAdminRoute && !isPublicAdminRoute && !isAdmin) {
+  if (isAdminRoute && !isLoginRoute && !isAdmin) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/admin/login';
     redirectUrl.searchParams.set('next', pathname);
