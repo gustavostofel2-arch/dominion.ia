@@ -275,7 +275,7 @@ export default function AdminDashboardPage() {
     if (role === 'admin') {
       const { error } = await supabase.rpc('add_admin_by_email', { target_email: email });
       if (error) {
-        alert('Marcado como administrador, mas ainda não existe conta com senha para este e-mail. Crie em Supabase > Authentication > Users (Add user) e depois use "Promover" no card Administradores.');
+        alert('Marcado como administrador. No primeiro acesso ao painel (Área Admin), essa pessoa clica em "Primeiro acesso de administrador? Criar minha senha" e define a própria senha pelo link enviado ao e-mail dela.');
       }
     } else {
       const { error } = await supabase.rpc('remove_admin_by_email', { target_email: email });

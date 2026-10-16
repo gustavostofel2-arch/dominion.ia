@@ -452,6 +452,59 @@ GRANT EXECUTE ON FUNCTION public.get_favorites(TEXT) TO anon, authenticated;
 REVOKE ALL ON FUNCTION public.toggle_favorite(TEXT, UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.toggle_favorite(TEXT, UUID) TO anon, authenticated;
 
+-- ============================================================================
+-- Primeiro acesso de administrador: a própria pessoa cria a senha
+-- ============================================================================
+-- admin_can_claim: o e-mail está marcado como admin em members e ainda não tem
+-- conta com senha? (usado pela tela /admin/login antes de enviar o link)
+CREATE OR REPLACE FUNCTION public.admin_can_claim(p_email TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.members WHERE email = lower(trim(p_email)) AND role = 'admin'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM auth.users
+    WHERE lower(email) = lower(trim(p_email)) AND COALESCE(encrypted_password, '') <> ''
+  );
+$$;
+
+-- claim_admin: quem está logado (e-mail confirmado pelo link) e foi marcado como
+-- admin em members entra em public.admins.
+CREATE OR REPLACE FUNCTION public.claim_admin()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  uid UUID := auth.uid();
+  mail TEXT;
+BEGIN
+  IF uid IS NULL THEN
+    RAISE EXCEPTION 'not authorized';
+  END IF;
+
+  SELECT lower(u.email) INTO mail
+  FROM auth.users u
+  WHERE u.id = uid AND u.email_confirmed_at IS NOT NULL;
+
+  IF mail IS NULL OR NOT EXISTS (SELECT 1 FROM public.members WHERE email = mail AND role = 'admin') THEN
+    RAISE EXCEPTION 'not authorized';
+  END IF;
+
+  INSERT INTO public.admins (user_id) VALUES (uid) ON CONFLICT DO NOTHING;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.admin_can_claim(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.admin_can_claim(TEXT) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.claim_admin() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.claim_admin() TO authenticated;
+
 -- Força o PostgREST a recarregar o cache de schema imediatamente. Sem isso,
 -- tabelas/colunas novas (como public.engines) só ficam visíveis pra API
 -- depois de alguns minutos (ou de um reload manual em Database > API),

@@ -13,8 +13,32 @@ function AdminLoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteMsg, setInviteMsg] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteLoading(true);
+    setInviteMsg(null);
+    try {
+      const value = inviteEmail.trim().toLowerCase();
+      const { data } = await supabase.rpc('admin_can_claim', { p_email: value });
+      if (data === true) {
+        await supabase.auth.signInWithOtp({
+          email: value,
+          options: { shouldCreateUser: true, emailRedirectTo: `${window.location.origin}/admin/definir-senha` },
+        });
+      }
+      // Same message either way, so the form doesn't reveal who is an admin.
+      setInviteMsg('Se este e-mail estiver autorizado como administrador, enviamos um link para criar a senha. Confira sua caixa de entrada e o spam.');
+    } finally {
+      setInviteLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +55,10 @@ function AdminLoginForm() {
       setLoading(false);
       return;
     }
+
+    // Promotes this account to admin if its (confirmed) e-mail was marked as
+    // admin in the members list; a rejection just means "not an admin".
+    await supabase.rpc('claim_admin');
 
     const requested = searchParams.get('next') || '/admin';
     const next = requested.startsWith('/admin') ? requested : '/admin';
@@ -108,6 +136,38 @@ function AdminLoginForm() {
             {loading ? 'Validando...' : 'Entrar no Painel'}
           </button>
         </form>
+
+        <div className="mt-6 flex flex-col gap-3">
+          {!inviteOpen ? (
+            <button
+              type="button"
+              onClick={() => setInviteOpen(true)}
+              className="text-xs text-primary hover:underline text-center"
+            >
+              Primeiro acesso de administrador? Criar minha senha
+            </button>
+          ) : (
+            <form onSubmit={handleInvite} className="flex flex-col gap-2">
+              <label className="text-[10px] font-mono text-outline uppercase tracking-wider">Seu e-mail de administrador</label>
+              <input
+                type="email"
+                required
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                className="px-4 py-2.5 bg-surface-container rounded-lg text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="voce@email.com"
+              />
+              <button
+                type="submit"
+                disabled={inviteLoading}
+                className="py-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-sm font-semibold transition-colors disabled:opacity-50"
+              >
+                {inviteLoading ? 'Enviando...' : 'Enviar link para criar senha'}
+              </button>
+              {inviteMsg && <p className="text-xs text-on-surface-variant text-center">{inviteMsg}</p>}
+            </form>
+          )}
+        </div>
 
         <div className="mt-8 pt-6 border-t border-surface-container flex items-center justify-center gap-2 text-outline">
           <Lock size={14} />
