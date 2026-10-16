@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/client';
 const supabase = createClient();
 
 export default function FavoritosPage() {
-  const { ids } = useFavorites();
+  const { ids, ready } = useFavorites();
   const [items, setItems] = useState<PromptItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
@@ -18,6 +18,7 @@ export default function FavoritosPage() {
 
   useEffect(() => {
     void (async () => {
+      if (!ready) return;
       const list = idsKey ? idsKey.split(',') : [];
       if (list.length === 0) {
         setItems([]);
@@ -48,7 +49,7 @@ export default function FavoritosPage() {
         setLoading(false);
       }
     })();
-  }, [idsKey]);
+  }, [idsKey, ready]);
 
   const visible = useMemo(() => items.filter(i => ids.includes(i.id)), [items, ids]);
 
@@ -71,7 +72,7 @@ export default function FavoritosPage() {
           <span className="text-[10px] font-mono text-primary uppercase tracking-widest font-semibold">Favoritos</span>
         </div>
         <h1 className="text-3xl font-semibold text-on-surface tracking-tight">Seus favoritos</h1>
-        <p className="text-on-surface-variant">Os prompts que você salvou, organizados por categoria. Ficam guardados neste dispositivo.</p>
+        <p className="text-on-surface-variant">Os prompts que você salvou, organizados por categoria. Só você vê esta lista.</p>
       </div>
 
       {groups.length > 1 && (

@@ -1,62 +1,72 @@
 'use client';
 
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { useMember } from './use-member';
 
-const KEY = 'dominion:favorites';
+const supabase = createClient();
+
+type Snapshot = { ids: string[]; ready: boolean };
+
 const EMPTY: string[] = [];
+const SERVER_SNAPSHOT: Snapshot = { ids: EMPTY, ready: false };
 const listeners = new Set<() => void>();
 
-let raw: string | null = null;
-let parsed: string[] = EMPTY;
+// One shared store for every heart button on the page (one fetch, not one per card).
+let snapshot: Snapshot = SERVER_SNAPSHOT;
+let loadedFor: string | null = null;
 
-function getSnapshot(): string[] {
-  let current: string | null = null;
-  try {
-    current = localStorage.getItem(KEY);
-  } catch {
-    return parsed;
-  }
-  if (current !== raw) {
-    raw = current;
-    try {
-      const value = current ? JSON.parse(current) : [];
-      parsed = Array.isArray(value) ? value : EMPTY;
-    } catch {
-      parsed = EMPTY;
-    }
-  }
-  return parsed;
-}
-
-function getServerSnapshot(): string[] {
-  return EMPTY;
+function emit(next: Snapshot) {
+  snapshot = next;
+  listeners.forEach(l => l());
 }
 
 function subscribe(callback: () => void) {
   listeners.add(callback);
-  window.addEventListener('storage', callback);
   return () => {
     listeners.delete(callback);
-    window.removeEventListener('storage', callback);
   };
 }
 
-function write(ids: string[]) {
+async function load(email: string) {
+  if (loadedFor === email) return;
+  loadedFor = email;
+  emit({ ids: EMPTY, ready: false });
   try {
-    localStorage.setItem(KEY, JSON.stringify(ids));
-  } catch {
-    return;
+    const { data, error } = await supabase.rpc('get_favorites', { p_email: email });
+    if (error) throw error;
+    emit({ ids: (data as { item_id: string }[] | null)?.map(r => r.item_id) ?? EMPTY, ready: true });
+  } catch (error) {
+    console.error('Falha ao carregar favoritos:', error);
+    emit({ ids: EMPTY, ready: true });
   }
-  listeners.forEach(l => l());
 }
 
 export function useFavorites() {
-  const ids = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const member = useMember();
+  const email = member?.email ?? '';
+  const { ids, ready } = useSyncExternalStore(subscribe, () => snapshot, () => SERVER_SNAPSHOT);
 
-  const toggle = useCallback((id: string) => {
-    const current = getSnapshot();
-    write(current.includes(id) ? current.filter(x => x !== id) : [...current, id]);
-  }, []);
+  useEffect(() => {
+    if (!email) return;
+    void (async () => {
+      await load(email);
+    })();
+  }, [email]);
 
-  return { ids, toggle, isFavorite: (id: string) => ids.includes(id) };
+  const toggle = useCallback(async (id: string) => {
+    if (!email) return;
+    const has = snapshot.ids.includes(id);
+    emit({ ids: has ? snapshot.ids.filter(x => x !== id) : [...snapshot.ids, id], ready: true });
+    try {
+      const { error } = await supabase.rpc('toggle_favorite', { p_email: email, p_item: id });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Falha ao salvar favorito:', error);
+      loadedFor = null;
+      await load(email);
+    }
+  }, [email]);
+
+  return { ids, ready, toggle, isFavorite: (id: string) => ids.includes(id) };
 }

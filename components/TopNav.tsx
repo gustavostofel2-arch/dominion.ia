@@ -1,16 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Bell, Bookmark, Image as ImageIcon, Film, Loader2, LogOut } from 'lucide-react';
+import { Search, Image as ImageIcon, Film, Loader2, LogOut } from 'lucide-react';
 import clsx from 'clsx';
 import { useSidebar } from './SidebarProvider';
 import { createClient } from '@/lib/supabase/client';
-import { clearMemberCookie, readMemberEmail } from '@/lib/member';
+import { clearMemberSession } from '@/lib/member';
+import { useMember } from '@/hooks/use-member';
 
 const supabase = createClient();
-
-const subscribeNoop = () => () => {};
 
 type SearchResult = { id: string; type: 'image' | 'video'; title: string };
 
@@ -22,10 +21,11 @@ export function TopNav() {
   const [searching, setSearching] = useState(false);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const memberEmail = useSyncExternalStore(subscribeNoop, readMemberEmail, () => '');
+  const member = useMember();
+  const displayName = member?.name || member?.email || '';
 
   const handleSignOut = () => {
-    clearMemberCookie();
+    clearMemberSession();
     window.location.assign('/entrar');
   };
 
@@ -115,23 +115,13 @@ export function TopNav() {
       </div>
 
       <div className="flex items-center gap-2 md:gap-4 ml-auto">
-        <button type="button" className="text-on-surface-variant hover:text-on-surface hover:bg-surface-container p-2 rounded-lg transition-colors relative" title="Notificações">
-          <Bell size={20} />
-          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-container shadow-[0_0_6px_rgba(254,44,85,0.7)]"></span>
-        </button>
-        <button type="button" className="text-on-surface-variant hover:text-on-surface hover:bg-surface-container p-2 rounded-lg transition-colors" title="Coleções salvas">
-          <Bookmark size={20} />
-        </button>
-
-        <div className="h-6 w-[1px] bg-surface-container-high mx-2"></div>
-
         <div className="flex items-center gap-2 pl-1">
           <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/40 flex items-center justify-center shrink-0 overflow-hidden">
-             <span className="text-xs font-bold text-primary uppercase">{memberEmail ? memberEmail[0] : '?'}</span>
+             <span className="text-xs font-bold text-primary uppercase">{displayName ? displayName[0] : '?'}</span>
           </div>
-          {memberEmail && (
-            <span className="hidden md:block text-xs text-on-surface-variant max-w-[160px] truncate" title={memberEmail}>
-              {memberEmail}
+          {displayName && (
+            <span className="hidden sm:block text-sm font-medium text-on-surface max-w-[160px] truncate" title={member?.email}>
+              {displayName}
             </span>
           )}
           <button

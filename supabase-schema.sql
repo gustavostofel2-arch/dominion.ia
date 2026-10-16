@@ -303,45 +303,154 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- Membros: e-mails que entraram pela tela de acesso (/entrar)
+-- Membros: lista de e-mails AUTORIZADOS a entrar (tela /entrar)
 -- ============================================================================
--- O acesso dos mentorados é só por e-mail (sem senha, sem verificação). O
--- visitante só consegue REGISTRAR o e-mail (via register_member); ler ou
--- apagar a lista é exclusivo de administradores.
+-- Só entra quem um administrador cadastrou aqui (painel Admin > Membros).
+-- Acesso é só por e-mail (sem senha). No primeiro acesso a pessoa informa o
+-- nome. O perfil "admin" aqui só libera o MENU Admin; para entrar no painel
+-- ainda é preciso senha (Supabase Auth) + estar em public.admins.
 CREATE TABLE IF NOT EXISTS public.members (
   email TEXT PRIMARY KEY CHECK (email = lower(email) AND length(email) <= 254),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   last_access_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+ALTER TABLE public.members ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE public.members ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
+ALTER TABLE public.members DROP CONSTRAINT IF EXISTS members_role_check;
+ALTER TABLE public.members ADD CONSTRAINT members_role_check CHECK (role IN ('user', 'admin'));
+
 ALTER TABLE public.members ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Admin lê membros" ON public.members;
 CREATE POLICY "Admin lê membros" ON public.members FOR SELECT USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Admin cadastra membros" ON public.members;
+CREATE POLICY "Admin cadastra membros" ON public.members FOR INSERT WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS "Admin edita membros" ON public.members;
+CREATE POLICY "Admin edita membros" ON public.members FOR UPDATE USING (public.is_admin()) WITH CHECK (public.is_admin());
+
 DROP POLICY IF EXISTS "Admin remove membros" ON public.members;
 CREATE POLICY "Admin remove membros" ON public.members FOR DELETE USING (public.is_admin());
 
-CREATE OR REPLACE FUNCTION public.register_member(member_email TEXT)
+-- Versão anterior deixava qualquer pessoa se auto-cadastrar: removida.
+DROP FUNCTION IF EXISTS public.register_member(TEXT);
+
+-- Quem já é administrador (com senha) vira membro admin automaticamente, para
+-- você não ficar trancado fora da tela de entrada.
+INSERT INTO public.members (email, role)
+SELECT lower(u.email), 'admin'
+FROM public.admins a
+JOIN auth.users u ON u.id = a.user_id
+WHERE u.email IS NOT NULL
+ON CONFLICT (email) DO UPDATE SET role = 'admin';
+
+-- Login por e-mail: devolve nome e perfil se o e-mail estiver cadastrado.
+CREATE OR REPLACE FUNCTION public.member_login(p_email TEXT)
+RETURNS TABLE(member_name TEXT, member_role TEXT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  e TEXT := lower(trim(p_email));
+BEGIN
+  IF e IS NULL OR length(e) > 254 THEN
+    RAISE EXCEPTION 'not registered';
+  END IF;
+
+  UPDATE public.members m
+  SET last_access_at = timezone('utc'::text, now())
+  WHERE m.email = e;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'not registered';
+  END IF;
+
+  RETURN QUERY SELECT m.name, m.role FROM public.members m WHERE m.email = e;
+END;
+$$;
+
+-- Primeiro acesso: grava o nome (só se ainda estiver vazio).
+CREATE OR REPLACE FUNCTION public.member_set_name(p_email TEXT, p_name TEXT)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  e TEXT := lower(trim(member_email));
+  e TEXT := lower(trim(p_email));
+  n TEXT := regexp_replace(trim(p_name), '\s+', ' ', 'g');
 BEGIN
-  IF e IS NULL OR length(e) > 254 OR e !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' THEN
-    RAISE EXCEPTION 'invalid email';
+  IF n IS NULL OR length(n) < 3 OR length(n) > 100 OR position(' ' IN n) = 0 THEN
+    RAISE EXCEPTION 'invalid name';
   END IF;
 
-  INSERT INTO public.members (email) VALUES (e)
-  ON CONFLICT (email) DO UPDATE SET last_access_at = timezone('utc'::text, now());
+  UPDATE public.members SET name = n WHERE email = e AND name IS NULL;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'name already set or not registered';
+  END IF;
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.register_member(TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.register_member(TEXT) TO anon, authenticated;
+-- ============================================================================
+-- Favoritos por pessoa (ligados ao e-mail do membro)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.favorites (
+  member_email TEXT NOT NULL REFERENCES public.members(email) ON DELETE CASCADE ON UPDATE CASCADE,
+  item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  PRIMARY KEY (member_email, item_id)
+);
+
+-- Sem nenhuma policy: ninguém lê/escreve direto; só pelas funções abaixo.
+ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
+
+CREATE OR REPLACE FUNCTION public.get_favorites(p_email TEXT)
+RETURNS TABLE(item_id UUID)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT f.item_id FROM public.favorites f WHERE f.member_email = lower(trim(p_email));
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.toggle_favorite(p_email TEXT, p_item UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  e TEXT := lower(trim(p_email));
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.members WHERE email = e) THEN
+    RAISE EXCEPTION 'not registered';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM public.favorites WHERE member_email = e AND item_id = p_item) THEN
+    DELETE FROM public.favorites WHERE member_email = e AND item_id = p_item;
+    RETURN FALSE;
+  END IF;
+
+  INSERT INTO public.favorites (member_email, item_id) VALUES (e, p_item);
+  RETURN TRUE;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.member_login(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.member_login(TEXT) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.member_set_name(TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.member_set_name(TEXT, TEXT) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_favorites(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_favorites(TEXT) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.toggle_favorite(TEXT, UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.toggle_favorite(TEXT, UUID) TO anon, authenticated;
 
 -- Força o PostgREST a recarregar o cache de schema imediatamente. Sem isso,
 -- tabelas/colunas novas (como public.engines) só ficam visíveis pra API

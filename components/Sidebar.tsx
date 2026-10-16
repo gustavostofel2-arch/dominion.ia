@@ -5,10 +5,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
 import { useSidebar } from './SidebarProvider';
+import { useMember } from '@/hooks/use-member';
 
 export function Sidebar() {
   const { collapsed: isCollapsed, setCollapsed: setIsCollapsed } = useSidebar();
   const pathname = usePathname();
+  const member = useMember();
+  const isAdmin = member?.role === 'admin';
 
   const navItems = [
     { label: 'Home', href: '/', icon: LayoutGrid },
@@ -86,37 +89,33 @@ export function Sidebar() {
           </nav>
         </div>
 
-        <div className="p-4 flex flex-col gap-2 w-full">
-          {!isCollapsed && (
-             <div className="px-1 pt-1">
-               <span className="text-[11px] font-medium text-outline uppercase tracking-wider">Gestão</span>
-             </div>
-          )}
-          <nav className="flex flex-col gap-1 w-full">
-            <Link
-              href="/admin"
-              className={clsx(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all w-full",
-                pathname.startsWith('/admin')
-                  ? "bg-surface-container-high text-primary font-semibold"
-                  : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface",
-                 isCollapsed ? "justify-center" : "justify-start"
-              )}
-              title={isCollapsed ? "Área Admin" : undefined}
-            >
-              <ShieldAlert size={18} className="shrink-0" />
-              {!isCollapsed && <span>Área Admin</span>}
-            </Link>
-          </nav>
-          {!isCollapsed && (
-            <div className="pt-2 flex items-center justify-between px-1 mt-2 border-t border-surface-container">
-              <div className="flex items-center gap-2">
-                <span className="inline-block w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_rgba(37,244,238,0.8)]"></span>
-                <span className="text-[11px] text-outline uppercase font-medium tracking-wider">v2.4 Pro</span>
-              </div>
-            </div>
-          )}
-        </div>
+        {isAdmin ? (
+          <div className="p-4 flex flex-col gap-2 w-full">
+            {!isCollapsed && (
+               <div className="px-1 pt-1">
+                 <span className="text-[11px] font-medium text-outline uppercase tracking-wider">Gestão</span>
+               </div>
+            )}
+            <nav className="flex flex-col gap-1 w-full">
+              <Link
+                href="/admin"
+                className={clsx(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all w-full",
+                  pathname.startsWith('/admin')
+                    ? "bg-surface-container-high text-primary font-semibold"
+                    : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface",
+                   isCollapsed ? "justify-center" : "justify-start"
+                )}
+                title={isCollapsed ? "Área Admin" : undefined}
+              >
+                <ShieldAlert size={18} className="shrink-0" />
+                {!isCollapsed && <span>Área Admin</span>}
+              </Link>
+            </nav>
+          </div>
+        ) : (
+          <div />
+        )}
       </aside>
 
       {/* Mobile Bottom Nav (Simple alternative for mobile) */}
@@ -137,16 +136,18 @@ export function Sidebar() {
             </Link>
           );
         })}
-        <Link
-           href="/admin"
-           className={clsx(
-             "flex flex-col items-center gap-1 p-2",
-             pathname.startsWith('/admin') ? "text-primary" : "text-on-surface-variant"
-           )}
-         >
-           <ShieldAlert size={20} />
-           <span className="text-[10px] font-medium">Admin</span>
-         </Link>
+        {isAdmin && (
+          <Link
+             href="/admin"
+             className={clsx(
+               "flex flex-col items-center gap-1 p-2",
+               pathname.startsWith('/admin') ? "text-primary" : "text-on-surface-variant"
+             )}
+           >
+             <ShieldAlert size={20} />
+             <span className="text-[10px] font-medium">Admin</span>
+           </Link>
+        )}
       </div>
     </>
   );

@@ -25,6 +25,7 @@ type Item = {
 
 type Lookup = { id: string; name: string };
 type AdminUser = { user_id: string; email: string; created_at: string };
+type MemberRow = { email: string; name: string | null; role: 'user' | 'admin'; last_access_at: string };
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -38,8 +39,9 @@ export default function AdminDashboardPage() {
   const [engines, setEngines] = useState<Lookup[]>([]);
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [adminsError, setAdminsError] = useState<string | null>(null);
-  const [members, setMembers] = useState<{ email: string; last_access_at: string }[]>([]);
-  const [membersCount, setMembersCount] = useState(0);
+  const [members, setMembers] = useState<MemberRow[]>([]);
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberRole, setNewMemberRole] = useState<'user' | 'admin'>('user');
 
   const fetchItems = useCallback(async (pageIndex: number) => {
     setLoading(true);
@@ -102,13 +104,12 @@ export default function AdminDashboardPage() {
 
   const fetchMembers = useCallback(async () => {
     try {
-      const { data, count } = await supabase
+      const { data } = await supabase
         .from('members')
-        .select('email, last_access_at', { count: 'exact' })
-        .order('last_access_at', { ascending: false })
-        .limit(10);
-      setMembers(data || []);
-      setMembersCount(count || 0);
+        .select('email, name, role, last_access_at')
+        .order('created_at', { ascending: false })
+        .limit(1000);
+      setMembers((data as MemberRow[] | null) || []);
     } catch (error) {
       console.error('Falha ao carregar membros:', error);
     }
@@ -267,6 +268,57 @@ export default function AdminDashboardPage() {
       return;
     }
     fetchAdmins();
+  };
+
+  // Keeps the password-protected admin list (public.admins) in step with the member role.
+  const syncAdminAccess = async (email: string, role: 'user' | 'admin') => {
+    if (role === 'admin') {
+      const { error } = await supabase.rpc('add_admin_by_email', { target_email: email });
+      if (error) {
+        alert('Marcado como administrador, mas ainda não existe conta com senha para este e-mail. Crie em Supabase > Authentication > Users (Add user) e depois use "Promover" no card Administradores.');
+      }
+    } else {
+      const { error } = await supabase.rpc('remove_admin_by_email', { target_email: email });
+      if (error && error.message.includes('último')) {
+        alert('Esta é a única conta de administrador com senha, então o acesso ao painel foi mantido.');
+      }
+    }
+    fetchAdmins();
+  };
+
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = newMemberEmail.trim().toLowerCase();
+    const { error } = await supabase.from('members').insert([{ email, role: newMemberRole }]);
+    if (error) {
+      alert(error.code === '23505' ? 'Este e-mail já está cadastrado.' : 'Erro ao cadastrar: ' + error.message);
+      return;
+    }
+    if (newMemberRole === 'admin') await syncAdminAccess(email, 'admin');
+    setNewMemberEmail('');
+    setNewMemberRole('user');
+    fetchMembers();
+  };
+
+  const handleChangeRole = async (member: MemberRow, role: 'user' | 'admin') => {
+    const { error } = await supabase.from('members').update({ role }).eq('email', member.email);
+    if (error) {
+      alert('Erro ao alterar perfil: ' + error.message);
+      return;
+    }
+    await syncAdminAccess(member.email, role);
+    fetchMembers();
+  };
+
+  const handleRemoveMember = async (member: MemberRow) => {
+    if (!confirm(`Remover o acesso de "${member.name || member.email}"? Os favoritos dessa pessoa também serão apagados.`)) return;
+    const { error } = await supabase.from('members').delete().eq('email', member.email);
+    if (error) {
+      alert('Erro ao remover: ' + error.message);
+      return;
+    }
+    if (member.role === 'admin') await syncAdminAccess(member.email, 'user');
+    fetchMembers();
   };
 
   const handleRemoveAdmin = async (admin: AdminUser) => {
@@ -506,21 +558,68 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        <div className="bg-surface-container-low rounded-xl border border-surface-container-highest/30 shadow-sm p-5 flex flex-col gap-3">
+        <div className="md:col-span-2 xl:col-span-3 bg-surface-container-low rounded-xl border border-surface-container-highest/30 shadow-sm p-5 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-on-surface flex items-center gap-2">
-              <Users size={16} className="text-primary" /> Membros
+              <Users size={16} className="text-primary" /> Membros com acesso
             </h2>
-            <span className="text-[10px] font-mono text-outline">{membersCount} no total</span>
+            <span className="text-[10px] font-mono text-outline">{members.length} cadastrados</span>
           </div>
+
+          <form onSubmit={handleAddMember} className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="email"
+              required
+              value={newMemberEmail}
+              onChange={(e) => setNewMemberEmail(e.target.value)}
+              placeholder="email@da-pessoa.com"
+              className="flex-1 px-4 py-2.5 bg-surface-container text-on-surface rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <select
+              value={newMemberRole}
+              onChange={(e) => setNewMemberRole(e.target.value as 'user' | 'admin')}
+              className="px-4 py-2.5 bg-surface-container text-on-surface rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="user">Usuário</option>
+              <option value="admin">Administrador</option>
+            </select>
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary-container text-on-primary-container font-semibold rounded-lg hover:opacity-90 transition-opacity"
+            >
+              <Plus size={16} /> Cadastrar
+            </button>
+          </form>
+          <p className="text-[11px] text-on-surface-variant">
+            Só e-mails cadastrados aqui conseguem entrar; no primeiro acesso a pessoa informa o nome. &quot;Administrador&quot; libera o menu Admin, mas para abrir o painel ainda é preciso a senha (conta criada em Supabase &gt; Authentication).
+          </p>
+
           <div className="flex flex-col divide-y divide-surface-container-high/60">
             {members.map(m => (
-              <div key={m.email} className="flex items-center justify-between py-2 gap-2">
-                <span className="text-sm text-on-surface-variant truncate">{m.email}</span>
-                <span className="text-[10px] font-mono text-outline shrink-0">{format(new Date(m.last_access_at), 'dd/MM HH:mm')}</span>
+              <div key={m.email} className="flex flex-col sm:flex-row sm:items-center justify-between py-2.5 gap-2">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm text-on-surface truncate">{m.name || 'Aguardando primeiro acesso'}</span>
+                  <span className="text-xs text-on-surface-variant truncate">{m.email}</span>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[10px] font-mono text-outline hidden md:block">
+                    {m.name ? `acesso ${format(new Date(m.last_access_at), 'dd/MM HH:mm')}` : ''}
+                  </span>
+                  <select
+                    value={m.role}
+                    onChange={(e) => handleChangeRole(m, e.target.value as 'user' | 'admin')}
+                    className="px-3 py-1.5 bg-surface-container text-on-surface rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="user">Usuário</option>
+                    <option value="admin">Administrador</option>
+                  </select>
+                  <button onClick={() => handleRemoveMember(m)} className="p-1.5 rounded text-outline hover:text-error hover:bg-surface-container transition-colors" title="Remover acesso">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             ))}
-            {members.length === 0 && <p className="text-xs text-on-surface-variant py-2">Nenhum membro registrado ainda (últimos acessos aparecem aqui).</p>}
+            {members.length === 0 && <p className="text-xs text-on-surface-variant py-2">Nenhum membro cadastrado. Cadastre o e-mail de quem pode entrar.</p>}
           </div>
         </div>
       </div>
