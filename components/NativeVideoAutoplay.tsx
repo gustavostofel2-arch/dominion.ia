@@ -7,67 +7,76 @@ import clsx from 'clsx';
 export function NativeVideoAutoplay({ src, title, interactive = true }: { src: string; title: string; interactive?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [inView, setInView] = useState(false);
+  const autoPlayedRef = useRef(false);
   const [muted, setMuted] = useState(true);
-  const [paused, setPaused] = useState(false);
+  const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    const video = videoRef.current;
+    if (!el || !video) return;
     const observer = new IntersectionObserver(
-      ([entry]) => setInView(entry.isIntersecting),
-      { threshold: 0.4 }
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          // Autoplay once, the first time the card scrolls into view.
+          if (!autoPlayedRef.current) {
+            autoPlayedRef.current = true;
+            video.muted = true;
+            video.play().catch(() => {});
+          }
+        } else {
+          video.pause();
+        }
+      },
+      { threshold: 0.5 }
     );
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
+    if (videoRef.current) videoRef.current.muted = muted;
+  }, [muted]);
+
+  const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
-    // Set the DOM property imperatively (not just the JSX attribute) right
-    // before play(): browsers only allow unattended autoplay when the video
-    // is actually muted at the moment play() runs, and React's `muted` prop
-    // doesn't reliably sync in time on initial mount, which silently blocks
-    // autoplay and leaves the video frozen on its first (often black) frame.
-    video.muted = muted;
-    if (inView && !paused) {
+    if (video.paused) {
+      if (video.ended) video.currentTime = 0;
       video.play().catch(() => {});
     } else {
       video.pause();
     }
-  }, [inView, paused, muted]);
+  };
 
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
     setMuted(m => !m);
   };
 
-  const togglePlay = () => {
-    if (!interactive) return;
-    setPaused(p => !p);
-  };
-
   return (
-    <div ref={containerRef} onClick={togglePlay} className={clsx("relative w-full h-full bg-black", interactive && "cursor-pointer")}>
-      {inView && (
-        <video
-          ref={videoRef}
-          src={src}
-          title={title}
-          muted={muted}
-          loop
-          playsInline
-          autoPlay
-          preload="metadata"
-          className="w-full h-full object-cover"
-        />
-      )}
+    <div
+      ref={containerRef}
+      onClick={interactive ? togglePlay : undefined}
+      className={clsx("relative w-full h-full bg-black", interactive && "cursor-pointer")}
+    >
+      {/* preload="metadata" + #t shows the first frame without downloading the whole file until it plays */}
+      <video
+        ref={videoRef}
+        src={`${src}#t=0.1`}
+        title={title}
+        muted
+        playsInline
+        preload="metadata"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        className="w-full h-full object-cover"
+      />
 
-      {interactive && paused && (
-        <span className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
-          <span className="w-12 h-12 rounded-full bg-surface-container-lowest/80 backdrop-blur-md flex items-center justify-center text-on-surface shadow-lg">
-            <Play size={20} className="ml-0.5" fill="currentColor" />
+      {interactive && !playing && (
+        <span className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none">
+          <span className="w-14 h-14 rounded-full bg-surface-container-low/90 backdrop-blur-md flex items-center justify-center text-primary shadow-lg">
+            <Play size={24} className="ml-0.5" fill="currentColor" />
           </span>
         </span>
       )}
@@ -77,7 +86,7 @@ export function NativeVideoAutoplay({ src, title, interactive = true }: { src: s
           type="button"
           onClick={toggleMute}
           aria-label={muted ? 'Ativar som' : 'Silenciar'}
-          className="absolute bottom-2 right-2 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-surface-container-lowest/70 backdrop-blur-md text-on-surface hover:bg-surface-container-high transition-colors"
+          className="absolute bottom-2 right-2 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-surface-container-low/90 backdrop-blur-md text-on-surface hover:bg-surface-container-high transition-colors"
         >
           {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
         </button>
