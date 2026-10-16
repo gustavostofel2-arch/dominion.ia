@@ -29,18 +29,26 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // A valid session is not enough: the account must be listed in public.admins.
+  let isAdmin = false;
+  if (user) {
+    const { data } = await supabase.rpc('is_admin');
+    isAdmin = data === true;
+  }
+
   const { pathname } = request.nextUrl;
   const isAdminRoute = pathname.startsWith('/admin');
   const isLoginRoute = pathname === '/admin/login';
 
-  if (isAdminRoute && !isLoginRoute && !user) {
+  if (isAdminRoute && !isLoginRoute && !isAdmin) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/admin/login';
     redirectUrl.searchParams.set('next', pathname);
+    if (user) redirectUrl.searchParams.set('denied', '1');
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (isLoginRoute && user) {
+  if (isLoginRoute && isAdmin) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/admin';
     redirectUrl.searchParams.delete('next');

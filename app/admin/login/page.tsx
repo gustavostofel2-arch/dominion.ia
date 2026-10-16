@@ -32,7 +32,8 @@ function AdminLoginForm() {
       return;
     }
 
-    const next = searchParams.get('next') || '/admin';
+    const requested = searchParams.get('next') || '/admin';
+    const next = requested.startsWith('/admin') ? requested : '/admin';
     router.push(next);
     router.refresh();
   };
@@ -54,9 +55,9 @@ function AdminLoginForm() {
         </div>
 
         <form onSubmit={handleLogin} className="flex flex-col gap-5">
-          {error && (
+          {(error || searchParams.get('denied')) && (
             <div className="p-3 rounded bg-error-container/20 border border-error/20 text-error text-sm text-center">
-              {error}
+              {error || 'Esta conta não tem permissão de administrador.'}
             </div>
           )}
 

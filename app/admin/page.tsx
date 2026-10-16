@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Edit, Trash2, Image as ImageIcon, Film, LogOut, Tag, Wrench, ShieldCheck, Cpu } from 'lucide-react';
+import { Plus, Edit, Trash2, Image as ImageIcon, Film, LogOut, Tag, Wrench, ShieldCheck, Cpu, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { format } from 'date-fns';
 
@@ -38,6 +38,8 @@ export default function AdminDashboardPage() {
   const [engines, setEngines] = useState<Lookup[]>([]);
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [adminsError, setAdminsError] = useState<string | null>(null);
+  const [members, setMembers] = useState<{ email: string; last_access_at: string }[]>([]);
+  const [membersCount, setMembersCount] = useState(0);
 
   const fetchItems = useCallback(async (pageIndex: number) => {
     setLoading(true);
@@ -98,13 +100,28 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
+  const fetchMembers = useCallback(async () => {
+    try {
+      const { data, count } = await supabase
+        .from('members')
+        .select('email, last_access_at', { count: 'exact' })
+        .order('last_access_at', { ascending: false })
+        .limit(10);
+      setMembers(data || []);
+      setMembersCount(count || 0);
+    } catch (error) {
+      console.error('Falha ao carregar membros:', error);
+    }
+  }, []);
+
   useEffect(() => {
     void (async () => {
       await fetchItems(0);
       await fetchLookups();
       await fetchAdmins();
+      await fetchMembers();
     })();
-  }, [fetchItems, fetchLookups, fetchAdmins]);
+  }, [fetchItems, fetchLookups, fetchAdmins, fetchMembers]);
 
   // Realtime: se outro admin cadastrar/editar/excluir algo em outra aba, esta
   // também atualiza sozinha.
@@ -487,6 +504,24 @@ export default function AdminDashboardPage() {
               {admins.length === 0 && <p className="text-xs text-on-surface-variant py-2">Nenhum administrador encontrado.</p>}
             </div>
           )}
+        </div>
+
+        <div className="bg-surface-container-low rounded-xl border border-surface-container-highest/30 shadow-sm p-5 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-on-surface flex items-center gap-2">
+              <Users size={16} className="text-primary" /> Membros
+            </h2>
+            <span className="text-[10px] font-mono text-outline">{membersCount} no total</span>
+          </div>
+          <div className="flex flex-col divide-y divide-surface-container-high/60">
+            {members.map(m => (
+              <div key={m.email} className="flex items-center justify-between py-2 gap-2">
+                <span className="text-sm text-on-surface-variant truncate">{m.email}</span>
+                <span className="text-[10px] font-mono text-outline shrink-0">{format(new Date(m.last_access_at), 'dd/MM HH:mm')}</span>
+              </div>
+            ))}
+            {members.length === 0 && <p className="text-xs text-on-surface-variant py-2">Nenhum membro registrado ainda (últimos acessos aparecem aqui).</p>}
+          </div>
         </div>
       </div>
     </div>

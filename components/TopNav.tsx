@@ -1,13 +1,16 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Bell, Bookmark, Image as ImageIcon, Film, Loader2 } from 'lucide-react';
+import { Search, Bell, Bookmark, Image as ImageIcon, Film, Loader2, LogOut } from 'lucide-react';
 import clsx from 'clsx';
 import { useSidebar } from './SidebarProvider';
 import { createClient } from '@/lib/supabase/client';
+import { clearMemberCookie, readMemberEmail } from '@/lib/member';
 
 const supabase = createClient();
+
+const subscribeNoop = () => () => {};
 
 type SearchResult = { id: string; type: 'image' | 'video'; title: string };
 
@@ -19,6 +22,12 @@ export function TopNav() {
   const [searching, setSearching] = useState(false);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const memberEmail = useSyncExternalStore(subscribeNoop, readMemberEmail, () => '');
+
+  const handleSignOut = () => {
+    clearMemberCookie();
+    window.location.assign('/entrar');
+  };
 
   useEffect(() => {
     const q = query.trim();
@@ -117,13 +126,23 @@ export function TopNav() {
         <div className="h-6 w-[1px] bg-surface-container-high mx-2"></div>
 
         <div className="flex items-center gap-2 pl-1">
-          <div className="w-8 h-8 rounded-full bg-surface-container-high border border-primary/40 flex items-center justify-center shrink-0 overflow-hidden">
-             <span className="text-xs font-bold text-on-surface">M</span>
+          <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/40 flex items-center justify-center shrink-0 overflow-hidden">
+             <span className="text-xs font-bold text-primary uppercase">{memberEmail ? memberEmail[0] : '?'}</span>
           </div>
-          <div className="flex flex-col text-left hidden sm:flex">
-            <span className="text-xs font-medium text-on-surface leading-tight">Mastermind AI</span>
-            <span className="text-[10px] font-mono text-secondary leading-tight uppercase tracking-wider">Criador Elite</span>
-          </div>
+          {memberEmail && (
+            <span className="hidden md:block text-xs text-on-surface-variant max-w-[160px] truncate" title={memberEmail}>
+              {memberEmail}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="text-on-surface-variant hover:text-primary hover:bg-surface-container p-2 rounded-lg transition-colors"
+            title="Sair"
+            aria-label="Sair"
+          >
+            <LogOut size={18} />
+          </button>
         </div>
       </div>
     </header>

@@ -302,6 +302,47 @@ BEGIN
   END IF;
 END $$;
 
+-- ============================================================================
+-- Membros: e-mails que entraram pela tela de acesso (/entrar)
+-- ============================================================================
+-- O acesso dos mentorados é só por e-mail (sem senha, sem verificação). O
+-- visitante só consegue REGISTRAR o e-mail (via register_member); ler ou
+-- apagar a lista é exclusivo de administradores.
+CREATE TABLE IF NOT EXISTS public.members (
+  email TEXT PRIMARY KEY CHECK (email = lower(email) AND length(email) <= 254),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  last_access_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.members ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admin lê membros" ON public.members;
+CREATE POLICY "Admin lê membros" ON public.members FOR SELECT USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Admin remove membros" ON public.members;
+CREATE POLICY "Admin remove membros" ON public.members FOR DELETE USING (public.is_admin());
+
+CREATE OR REPLACE FUNCTION public.register_member(member_email TEXT)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  e TEXT := lower(trim(member_email));
+BEGIN
+  IF e IS NULL OR length(e) > 254 OR e !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' THEN
+    RAISE EXCEPTION 'invalid email';
+  END IF;
+
+  INSERT INTO public.members (email) VALUES (e)
+  ON CONFLICT (email) DO UPDATE SET last_access_at = timezone('utc'::text, now());
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.register_member(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.register_member(TEXT) TO anon, authenticated;
+
 -- Força o PostgREST a recarregar o cache de schema imediatamente. Sem isso,
 -- tabelas/colunas novas (como public.engines) só ficam visíveis pra API
 -- depois de alguns minutos (ou de um reload manual em Database > API),
