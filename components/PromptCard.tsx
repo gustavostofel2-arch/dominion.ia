@@ -103,9 +103,23 @@ export function PromptCard({ item }: { item: PromptItem }) {
       {/* Content Body */}
       <div className="flex flex-col p-4 flex-1 justify-between gap-3 bg-surface-container-low">
         <div className="flex flex-col gap-1">
-          <h3 className="text-base font-semibold text-on-surface truncate" title={item.title}>
+          <h3 className="text-base font-semibold text-on-surface break-words">
             {item.title}
           </h3>
+          {(item.tool?.name || item.engine?.name) && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {item.tool?.name && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider bg-primary/10 text-primary">
+                  {item.tool.name}
+                </span>
+              )}
+              {item.engine?.name && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider bg-secondary-container/40 text-secondary">
+                  {item.engine.name}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Prompt Syntax Box */}
