@@ -1,4 +1,6 @@
-import type {Metadata} from 'next';
+import type { Metadata, Viewport } from 'next';
+import { LOGO_URL } from '@/components/Brand';
+import { Atmosphere } from '@/components/Atmosphere';
 import { Geist, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { SidebarProvider } from '@/components/SidebarProvider';
@@ -15,14 +17,20 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Dominion Prompt - Mastermind VIP',
-  description: 'Biblioteca de prompts de IA para mentorados.',
+  title: 'Dominion Prompt',
+  description: 'Banco de prompts validados para Veo 3, Magnific e mais.',
+  icons: { icon: LOGO_URL },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#03050b',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="pt-BR" className={`${geist.variable} ${jetbrainsMono.variable}`} style={{colorScheme: 'light'}}>
+    <html lang="pt-BR" className={`${geist.variable} ${jetbrainsMono.variable}`} style={{colorScheme: 'dark'}}>
       <body suppressHydrationWarning className="text-on-surface antialiased font-sans">
+        <Atmosphere />
         <SidebarProvider>
           <AppShell>{children}</AppShell>
         </SidebarProvider>

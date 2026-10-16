@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
 import { useSidebar } from './SidebarProvider';
 import { useMember } from '@/hooks/use-member';
+import { BrandMark } from './Brand';
 
 export function Sidebar() {
   const { collapsed: isCollapsed, setCollapsed: setIsCollapsed } = useSidebar();
@@ -33,9 +34,7 @@ export function Sidebar() {
         <div className="flex flex-col w-full">
           {isCollapsed ? (
             <div className="h-16 flex flex-col items-center justify-center gap-1.5">
-              <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center shrink-0">
-                <span className="font-bold text-primary text-xl">D</span>
-              </div>
+              <BrandMark size={32} />
               <button
                 onClick={() => setIsCollapsed(false)}
                 className="text-on-surface-variant hover:text-on-surface hover:bg-surface-container p-1 rounded transition-colors shrink-0"
@@ -47,9 +46,7 @@ export function Sidebar() {
           ) : (
             <div className="h-16 px-4 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 overflow-hidden">
-                <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center shrink-0">
-                  <span className="font-bold text-primary text-xl">D</span>
-                </div>
+                <BrandMark size={32} />
               </div>
               <button
                 onClick={() => setIsCollapsed(true)}

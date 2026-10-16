@@ -48,12 +48,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     })();
   }, [pathname]);
 
-  if (pathname === '/entrar') {
+  // Standalone auth screens: no sidebar / top bar.
+  if (pathname === '/entrar' || pathname === '/admin/login') {
     return <>{children}</>;
   }
 
   return (
-    <>
+    <div data-admin={pathname.startsWith('/admin') ? 'true' : undefined}>
       <Sidebar />
       <ContentWrapper>
         <TopNav />
@@ -61,6 +62,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </ContentWrapper>
-    </>
+    </div>
   );
 }

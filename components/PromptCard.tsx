@@ -91,7 +91,7 @@ export function PromptCard({ item }: { item: PromptItem }) {
             aria-label={favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
             aria-pressed={favorite}
             className={clsx(
-              "w-8 h-8 flex items-center justify-center rounded-full bg-surface-container-low/90 backdrop-blur-md shadow-sm transition-colors",
+              "w-8 h-8 flex items-center justify-center rounded-full bg-[#0b1222]/85 backdrop-blur-md shadow-sm transition-colors",
               favorite ? "text-primary" : "text-on-surface-variant hover:text-primary"
             )}
           >
@@ -114,7 +114,7 @@ export function PromptCard({ item }: { item: PromptItem }) {
                 </span>
               )}
               {item.engine?.name && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider bg-secondary-container/40 text-secondary">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider bg-secondary/15 text-secondary">
                   {item.engine.name}
                 </span>
               )}

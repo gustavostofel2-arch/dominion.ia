@@ -75,7 +75,7 @@ export function NativeVideoAutoplay({ src, title, interactive = true }: { src: s
 
       {interactive && !playing && (
         <span className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none">
-          <span className="w-14 h-14 rounded-full bg-surface-container-low/90 backdrop-blur-md flex items-center justify-center text-primary shadow-lg">
+          <span className="w-14 h-14 rounded-full bg-[#0b1222]/85 backdrop-blur-md flex items-center justify-center text-primary shadow-lg">
             <Play size={24} className="ml-0.5" fill="currentColor" />
           </span>
         </span>
@@ -86,7 +86,7 @@ export function NativeVideoAutoplay({ src, title, interactive = true }: { src: s
           type="button"
           onClick={toggleMute}
           aria-label={muted ? 'Ativar som' : 'Silenciar'}
-          className="absolute bottom-2 right-2 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-surface-container-low/90 backdrop-blur-md text-on-surface hover:bg-surface-container-high transition-colors"
+          className="absolute bottom-2 right-2 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-[#0b1222]/85 backdrop-blur-md text-on-surface hover:bg-surface-container-high transition-colors"
         >
           {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
         </button>

@@ -2,14 +2,17 @@
 
 import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Mail, User, ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Check, Copy, Lock, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { setMemberSession } from '@/lib/member';
+import { AuthFooter, Brand, WindowBar } from '@/components/Brand';
 
 const supabase = createClient();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type LoginRow = { member_name: string | null; member_role: string };
+
+const TOOLS = ['Veo 3', 'Magnific', 'Kling 2.5', 'Google Flow', 'Omni Flash'];
 
 function EntrarForm() {
   const searchParams = useSearchParams();
@@ -88,85 +91,151 @@ function EntrarForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10">
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/10 blur-[100px] pointer-events-none -z-10 rounded-full"></div>
-
-      <div className="w-full max-w-md bg-surface-container-low rounded-2xl shadow-2xl p-8 border border-surface-container-highest/50">
-        <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center text-primary mb-4 shadow-sm font-bold text-2xl">
-            D
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-on-surface">Dominion Prompt</h1>
-          <p className="text-sm text-on-surface-variant mt-2">
-            {step === 'email'
-              ? 'Digite seu e-mail para acessar a biblioteca de prompts.'
-              : 'Primeiro acesso! Como você se chama?'}
-          </p>
-        </div>
-
-        {error && (
-          <div className="mb-5 p-3 rounded bg-error-container/40 border border-error/20 text-error text-sm text-center">
-            {error}
-          </div>
-        )}
-
-        {step === 'email' ? (
-          <form onSubmit={handleEmail} className="flex flex-col gap-5" noValidate>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="email" className="text-[10px] font-mono text-outline uppercase tracking-wider">Seu e-mail</label>
-              <div className="relative flex items-center bg-surface-container rounded-lg focus-within:ring-1 focus-within:ring-primary transition-all">
-                <Mail size={16} className="absolute left-3 text-outline pointer-events-none" />
-                <input
-                  id="email"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  autoFocus
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-transparent py-3 pl-10 pr-3 text-sm text-on-surface placeholder:text-outline focus:outline-none"
-                  placeholder="voce@email.com"
-                />
-              </div>
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-lg bg-primary-container hover:opacity-90 text-on-primary-container font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading ? <Loader2 size={18} className="animate-spin" /> : <>Entrar <ArrowRight size={16} /></>}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleName} className="flex flex-col gap-5" noValidate>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="name" className="text-[10px] font-mono text-outline uppercase tracking-wider">Nome e sobrenome</label>
-              <div className="relative flex items-center bg-surface-container rounded-lg focus-within:ring-1 focus-within:ring-primary transition-all">
-                <User size={16} className="absolute left-3 text-outline pointer-events-none" />
-                <input
-                  id="name"
-                  type="text"
-                  autoComplete="name"
-                  autoFocus
-                  maxLength={100}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-transparent py-3 pl-10 pr-3 text-sm text-on-surface placeholder:text-outline focus:outline-none"
-                  placeholder="Maria Silva"
-                />
-              </div>
-              <p className="text-[11px] text-on-surface-variant">{email}</p>
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-lg bg-primary-container hover:opacity-90 text-on-primary-container font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading ? <Loader2 size={18} className="animate-spin" /> : <>Continuar <ArrowRight size={16} /></>}
-            </button>
-          </form>
-        )}
+    <div className="flex min-h-screen flex-col">
+      <div className="border-b border-white/10 bg-[#070b16]/55 backdrop-blur-md">
+        <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-5">
+          <Brand />
+          <span className="dk-pill hidden items-center gap-2 rounded-full px-3 py-1.5 font-mono text-[11px] sm:inline-flex">
+            <span className="dk-pulse" aria-hidden="true" />
+            acesso por e-mail · lista autorizada
+          </span>
+        </header>
       </div>
+
+      <main className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-[minmax(0,1fr)] items-center gap-10 px-4 py-10 sm:px-5 min-[960px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] min-[960px]:gap-16 min-[960px]:py-14">
+        {/* Manifesto + demonstração (no celular fica depois do formulário) */}
+        <section className="order-2 min-[960px]:order-1">
+          <p className="eyebrow">Banco de prompts validados</p>
+          <h1 className="mt-5 text-[52px] font-semibold leading-[0.92] tracking-[-0.05em] text-on-surface sm:text-[76px]">
+            <span className="flex items-baseline gap-4">
+              Copie.
+              <span className="font-mono text-xs font-medium tracking-normal text-outline">01</span>
+            </span>
+            <span className="flex items-baseline gap-4">
+              Cole.
+              <span className="font-mono text-xs font-medium tracking-normal text-outline">02</span>
+            </span>
+            <span className="flex items-baseline gap-4">
+              <span className="dk-crie" data-text="Crie.">Crie.</span>
+              <span className="font-mono text-xs font-medium tracking-normal text-secondary">03</span>
+            </span>
+          </h1>
+          <p className="mt-6 max-w-md text-[17px] leading-relaxed text-on-surface-variant">
+            Seu arsenal de prompts testados e aprovados para gerar vídeos e imagens verticais: Veo 3, Magnific, Kling e Google Flow, organizados por nicho.
+          </p>
+
+          <div className="mt-6 flex max-w-md flex-wrap gap-2">
+            {TOOLS.map(tool => (
+              <span key={tool} className="dk-pill rounded-full px-3 py-1 font-mono text-[11px]">{tool}</span>
+            ))}
+          </div>
+
+          <div className="mt-10 max-w-md" aria-hidden="true">
+            <div className="glass-strong dk-float overflow-hidden !rounded-[22px]">
+              <WindowBar title="veo 3 · prompt validado" />
+              <div className="flex items-center justify-between gap-4 px-5 py-4">
+                <span className="min-w-0">
+                  <span className="block font-mono text-[10px] uppercase tracking-[0.2em] text-outline">Prompt</span>
+                  <span className="dk-code mt-1 block truncate font-mono text-sm font-semibold sm:text-base">
+                    Mirror selfie, one continuous shot…
+                  </span>
+                </span>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-on-surface">
+                  <Copy size={18} />
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 py-2 pl-8 max-[479px]:hidden">
+              <span className="dash-v h-10 w-0.5" />
+              <span className="font-mono text-[11px] text-outline">copie aqui → cole na ferramenta</span>
+            </div>
+
+            <div className="glass-strong dk-float-late ml-10 overflow-hidden !rounded-[22px] max-[479px]:hidden">
+              <WindowBar
+                title="magnific · resultado"
+                right={<span className="dk-badge-ok rounded-full px-2 py-0.5 font-mono text-[10px]">validado</span>}
+              />
+              <div className="flex items-center gap-3 px-5 py-4">
+                <span className="dk-check flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+                  <Check size={18} />
+                </span>
+                <span className="caret truncate font-mono text-xs text-on-surface-variant">resultado aprovado, pronto pro TikTok</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Formulário */}
+        <section className="glass-strong order-1 mx-auto w-full max-w-md overflow-hidden min-[960px]:order-2 min-[960px]:ml-auto min-[960px]:mr-0">
+          <WindowBar title={step === 'email' ? 'dominion · entrar' : 'dominion · primeiro acesso'} />
+
+          <div className="p-7 sm:p-9">
+            <h2 className="text-[30px] font-semibold leading-tight tracking-[-0.03em] text-on-surface">
+              {step === 'email' ? 'Acesse o arsenal' : 'Como você se chama?'}
+            </h2>
+            <p className="mt-2 text-[15px] leading-relaxed text-on-surface-variant">
+              {step === 'email'
+                ? 'Entre com o e-mail que o administrador cadastrou para você.'
+                : 'É o seu primeiro acesso. Informe nome e sobrenome.'}
+            </p>
+
+            {error && (
+              <p className="dk-alert-error mt-6 rounded-xl px-4 py-3 text-sm">{error}</p>
+            )}
+
+            {step === 'email' ? (
+              <form onSubmit={handleEmail} className="mt-7 space-y-5" noValidate>
+                <label className="block">
+                  <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-outline">Seu e-mail</span>
+                  <input
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    autoFocus
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="field mt-2"
+                    placeholder="voce@email.com"
+                  />
+                </label>
+                <button type="submit" disabled={loading} className="btn-primary">
+                  <span>{loading ? 'Aguarde...' : 'Entrar'}</span>
+                  {loading ? <Loader2 size={20} className="animate-spin" /> : <ArrowRight size={20} />}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleName} className="mt-7 space-y-5" noValidate>
+                <label className="block">
+                  <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-outline">Nome e sobrenome</span>
+                  <input
+                    type="text"
+                    autoComplete="name"
+                    autoFocus
+                    maxLength={100}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="field mt-2"
+                    placeholder="Maria Silva"
+                  />
+                  <span className="mt-2 block text-xs text-outline">{email}</span>
+                </label>
+                <button type="submit" disabled={loading} className="btn-primary">
+                  <span>{loading ? 'Aguarde...' : 'Continuar'}</span>
+                  {loading ? <Loader2 size={20} className="animate-spin" /> : <ArrowRight size={20} />}
+                </button>
+              </form>
+            )}
+
+            <p className="dk-info mt-7 flex gap-3 rounded-2xl px-4 py-3.5 text-[13px] leading-relaxed">
+              <Lock size={16} className="mt-0.5 shrink-0 text-tertiary" />
+              O acesso é liberado pelo administrador. Se o seu e-mail não funcionar, peça para cadastrá-lo.
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <AuthFooter />
     </div>
   );
 }

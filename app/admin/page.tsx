@@ -611,7 +611,7 @@ export default function AdminDashboardPage() {
                       <button
                         type="button"
                         onClick={() => navigator.clipboard.writeText(m.admin_code!)}
-                        className="font-mono font-semibold bg-secondary-container/40 px-1.5 py-0.5 rounded hover:bg-secondary-container/70 transition-colors"
+                        className="font-mono font-semibold bg-secondary/15 px-1.5 py-0.5 rounded hover:bg-secondary/25 transition-colors"
                         title="Copiar código"
                       >
                         {m.admin_code}
