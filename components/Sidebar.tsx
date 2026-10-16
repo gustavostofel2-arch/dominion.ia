@@ -1,6 +1,6 @@
 'use client';
 
-import { Menu, X, LayoutGrid, Image as ImageIcon, Film, ShieldAlert } from 'lucide-react';
+import { Menu, X, LayoutGrid, Image as ImageIcon, Film, ShieldAlert, Heart } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
@@ -14,6 +14,7 @@ export function Sidebar() {
     { label: 'Home', href: '/', icon: LayoutGrid },
     { label: 'Prompts de Imagem', href: '/prompts/imagem', icon: ImageIcon },
     { label: 'Prompts de Vídeo', href: '/prompts/video', icon: Film },
+    { label: 'Favoritos', href: '/favoritos', icon: Heart },
   ];
 
   return (

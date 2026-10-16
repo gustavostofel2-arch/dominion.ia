@@ -66,7 +66,7 @@ export function TopNav() {
       "fixed top-0 left-0 right-0 h-16 bg-surface-container-lowest/80 backdrop-blur-xl z-40 px-4 md:px-8 flex items-center gap-4 shadow-[0_1px_8px_rgba(0,0,0,0.04)] transition-all duration-300",
       collapsed ? "lg:left-20" : "lg:left-64"
     )}>
-      <span className="font-semibold text-on-surface tracking-tight whitespace-nowrap hidden sm:block">Domínio Prompt</span>
+      <span className="font-semibold text-on-surface tracking-tight whitespace-nowrap hidden sm:block">Dominion Prompt</span>
 
       <div ref={containerRef} className="relative flex-1 max-w-lg">
         <div className="relative w-full flex items-center">

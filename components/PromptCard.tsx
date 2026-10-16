@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import Image from 'next/image';
 import { YouTubeAutoplayEmbed } from './YouTubeAutoplayEmbed';
 import { NativeVideoAutoplay } from './NativeVideoAutoplay';
+import { useFavorites } from '@/hooks/use-favorites';
 
 export type PromptItem = {
   id: string;
@@ -20,6 +21,8 @@ export type PromptItem = {
 
 export function PromptCard({ item }: { item: PromptItem }) {
   const [copied, setCopied] = useState(false);
+  const { toggle, isFavorite } = useFavorites();
+  const favorite = isFavorite(item.id);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(item.prompt_text);
@@ -74,9 +77,6 @@ export function PromptCard({ item }: { item: PromptItem }) {
           />
         )}
         
-        {/* Gradient Scrim */}
-        <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/90 via-transparent to-black/20 pointer-events-none"></div>
-        
         {/* Top Badges */}
         <div className="absolute top-2 left-2 right-11 flex flex-wrap items-center gap-1.5 z-10 pointer-events-none">
           <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-surface-container-highest/80 text-on-surface backdrop-blur-md">
@@ -85,8 +85,17 @@ export function PromptCard({ item }: { item: PromptItem }) {
         </div>
 
         <div className="absolute top-2 right-2 z-10">
-          <button type="button" onClick={(e) => e.stopPropagation()} className="w-7 h-7 flex items-center justify-center rounded bg-surface-container-lowest/70 backdrop-blur-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors">
-            <Heart size={14} />
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); toggle(item.id); }}
+            aria-label={favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+            aria-pressed={favorite}
+            className={clsx(
+              "w-8 h-8 flex items-center justify-center rounded-full bg-surface-container-low/90 backdrop-blur-md shadow-sm transition-colors",
+              favorite ? "text-primary" : "text-on-surface-variant hover:text-primary"
+            )}
+          >
+            <Heart size={16} fill={favorite ? 'currentColor' : 'none'} />
           </button>
         </div>
       </div>
