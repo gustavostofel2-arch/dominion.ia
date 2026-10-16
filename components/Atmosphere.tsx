@@ -5,6 +5,7 @@ export function Atmosphere() {
       <div className="dk-orb dk-orb-blue" />
       <div className="dk-orb dk-orb-cyan" />
       <div className="dk-orb dk-orb-pink" />
+      <div className="dk-beam" />
       <div className="dk-noise" />
     </div>
   );

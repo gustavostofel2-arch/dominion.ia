@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ArrowRight, Check, Copy, Lock, Loader2 } from 'lucide-react';
+import { ArrowRight, Film, Image as ImageIcon, Lock, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { setMemberSession } from '@/lib/member';
+import { getYouTubeId } from '@/lib/media';
 import { AuthFooter, Brand, WindowBar } from '@/components/Brand';
 
 const supabase = createClient();
@@ -14,8 +15,77 @@ type LoginRow = { member_name: string | null; member_role: string };
 
 const TOOLS = ['Veo 3', 'Magnific', 'Kling 2.5', 'Google Flow', 'Omni Flash'];
 
+type Preview = {
+  id: string;
+  type: 'image' | 'video';
+  title: string;
+  prompt_text: string;
+  media_url: string;
+  niche: { name: string } | null;
+};
+
+// Small frame of the media: image as-is, YouTube thumbnail, or the first frame
+// of an uploaded video (metadata only, so it stays light).
+function PreviewFrame({ item }: { item: Preview }) {
+  const ytId = item.type === 'video' ? getYouTubeId(item.media_url) : null;
+  return (
+    <span className="relative block aspect-[9/16] w-20 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black sm:w-24">
+      {item.type === 'image' ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={item.media_url} alt="" loading="lazy" className="h-full w-full object-cover" />
+      ) : ytId ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`} alt="" loading="lazy" className="h-full w-full object-cover" />
+      ) : (
+        <video src={`${item.media_url}#t=0.1`} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+      )}
+      <span className="absolute bottom-1 left-1 rounded bg-[#0b1222]/85 p-1 text-on-surface">
+        {item.type === 'video' ? <Film size={10} /> : <ImageIcon size={10} />}
+      </span>
+    </span>
+  );
+}
+
+function PreviewCard({ item, late }: { item: Preview; late: boolean }) {
+  return (
+    <div className={`glass-strong overflow-hidden !rounded-[22px] ${late ? 'dk-float-late ml-8' : 'dk-float'}`}>
+      <WindowBar
+        title={`prompt · ${item.niche?.name?.toLowerCase() ?? 'validado'}`}
+        right={<span className="dk-badge-ok rounded-full px-2 py-0.5 font-mono text-[10px]">validado</span>}
+      />
+      <div className="flex gap-4 p-4">
+        <PreviewFrame item={item} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold text-on-surface">{item.title}</span>
+          <span className="mt-2 line-clamp-4 font-mono text-[11px] leading-relaxed text-on-surface-variant">
+            {item.prompt_text}
+          </span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function EntrarForm() {
   const searchParams = useSearchParams();
+  const [previews, setPreviews] = useState<Preview[]>([]);
+
+  // Latest prompts (public read) so the login screen shows what is inside.
+  useEffect(() => {
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from('items')
+          .select('id, type, title, prompt_text, media_url, niche:niches(name)')
+          .order('created_at', { ascending: false })
+          .limit(2);
+        setPreviews((data as unknown as Preview[] | null) ?? []);
+      } catch (error) {
+        console.error('Falha ao carregar prévias:', error);
+      }
+    })();
+  }, []);
+
   const [step, setStep] = useState<'email' | 'name'>('email');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -97,31 +167,22 @@ function EntrarForm() {
           <Brand />
           <span className="dk-pill hidden items-center gap-2 rounded-full px-3 py-1.5 font-mono text-[11px] sm:inline-flex">
             <span className="dk-pulse" aria-hidden="true" />
-            acesso por e-mail · lista autorizada
+            acesso por e-mail
           </span>
         </header>
       </div>
 
       <main className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-[minmax(0,1fr)] items-center gap-10 px-4 py-10 sm:px-5 min-[960px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] min-[960px]:gap-16 min-[960px]:py-14">
-        {/* Manifesto + demonstração (no celular fica depois do formulário) */}
+        {/* Apresentação + prévia real dos prompts (no celular fica depois do formulário) */}
         <section className="order-2 min-[960px]:order-1">
-          <p className="eyebrow">Banco de prompts validados</p>
+          <p className="eyebrow">Arsenal de prompts</p>
           <h1 className="mt-5 text-[52px] font-semibold leading-[0.92] tracking-[-0.05em] text-on-surface sm:text-[76px]">
-            <span className="flex items-baseline gap-4">
-              Copie.
-              <span className="font-mono text-xs font-medium tracking-normal text-outline">01</span>
-            </span>
-            <span className="flex items-baseline gap-4">
-              Cole.
-              <span className="font-mono text-xs font-medium tracking-normal text-outline">02</span>
-            </span>
-            <span className="flex items-baseline gap-4">
-              <span className="dk-crie" data-text="Crie.">Crie.</span>
-              <span className="font-mono text-xs font-medium tracking-normal text-secondary">03</span>
-            </span>
+            <span className="block">Banco de</span>
+            <span className="block">prompts</span>
+            <span className="dk-crie block w-fit" data-text="validados.">validados.</span>
           </h1>
           <p className="mt-6 max-w-md text-[17px] leading-relaxed text-on-surface-variant">
-            Seu arsenal de prompts testados e aprovados para gerar vídeos e imagens verticais: Veo 3, Magnific, Kling e Google Flow, organizados por nicho.
+            Prompts testados e aprovados para gerar vídeos e imagens verticais. Veja a prévia, copie e use no Veo 3, Magnific, Kling e Google Flow.
           </p>
 
           <div className="mt-6 flex max-w-md flex-wrap gap-2">
@@ -130,40 +191,14 @@ function EntrarForm() {
             ))}
           </div>
 
-          <div className="mt-10 max-w-md" aria-hidden="true">
-            <div className="glass-strong dk-float overflow-hidden !rounded-[22px]">
-              <WindowBar title="veo 3 · prompt validado" />
-              <div className="flex items-center justify-between gap-4 px-5 py-4">
-                <span className="min-w-0">
-                  <span className="block font-mono text-[10px] uppercase tracking-[0.2em] text-outline">Prompt</span>
-                  <span className="dk-code mt-1 block truncate font-mono text-sm font-semibold sm:text-base">
-                    Mirror selfie, one continuous shot…
-                  </span>
-                </span>
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-on-surface">
-                  <Copy size={18} />
-                </span>
-              </div>
+          {previews.length > 0 && (
+            <div className="mt-10 max-w-md space-y-3" aria-hidden="true">
+              <p className="eyebrow">Prévia do que tem lá dentro</p>
+              {previews.map((item, i) => (
+                <PreviewCard key={item.id} item={item} late={i % 2 === 1} />
+              ))}
             </div>
-
-            <div className="flex items-center gap-3 py-2 pl-8 max-[479px]:hidden">
-              <span className="dash-v h-10 w-0.5" />
-              <span className="font-mono text-[11px] text-outline">copie aqui → cole na ferramenta</span>
-            </div>
-
-            <div className="glass-strong dk-float-late ml-10 overflow-hidden !rounded-[22px] max-[479px]:hidden">
-              <WindowBar
-                title="magnific · resultado"
-                right={<span className="dk-badge-ok rounded-full px-2 py-0.5 font-mono text-[10px]">validado</span>}
-              />
-              <div className="flex items-center gap-3 px-5 py-4">
-                <span className="dk-check flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
-                  <Check size={18} />
-                </span>
-                <span className="caret truncate font-mono text-xs text-on-surface-variant">resultado aprovado, pronto pro TikTok</span>
-              </div>
-            </div>
-          </div>
+          )}
         </section>
 
         {/* Formulário */}

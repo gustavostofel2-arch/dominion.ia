@@ -47,9 +47,10 @@ html {
 }
 
 @layer base {
+  /* Sem fundo no body: ele pintaria por cima da camada .dk-bg (z-index -1);
+     a cor de fundo vem do <html>. */
   body {
     @apply text-on-surface antialiased;
-    background-color: #03050b;
   }
 }
 
@@ -57,12 +58,20 @@ html {
 .dk-bg { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
 .dk-grid {
   position: absolute; inset: 0;
+  /* malha fina (32px) + malha grande (160px): lê como um "frame" / papel milimetrado */
   background-image:
-    linear-gradient(to right, rgba(120, 160, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(120, 160, 255, 0.06) 1px, transparent 1px);
-  background-size: 32px 32px;
-  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 35%, transparent 100%);
-  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 35%, transparent 100%);
+    linear-gradient(to right, rgba(120, 160, 255, 0.2) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(120, 160, 255, 0.2) 1px, transparent 1px),
+    linear-gradient(to right, rgba(120, 160, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(120, 160, 255, 0.1) 1px, transparent 1px);
+  background-size: 160px 160px, 160px 160px, 32px 32px, 32px 32px;
+  -webkit-mask-image: radial-gradient(ellipse 95% 85% at 50% 40%, #000 45%, rgba(0, 0, 0, 0.35) 100%);
+  mask-image: radial-gradient(ellipse 95% 85% at 50% 40%, #000 45%, rgba(0, 0, 0, 0.35) 100%);
+}
+.dk-beam {
+  position: absolute; left: -10%; bottom: -20%; width: 90%; height: 70%;
+  background: linear-gradient(35deg, rgba(31, 79, 255, 0.22) 0%, rgba(47, 107, 255, 0.08) 35%, transparent 65%);
+  filter: blur(30px); transform: skewX(-12deg); opacity: 0.6;
 }
 .dk-orb { position: absolute; border-radius: 9999px; animation: dk-breathe 8s ease-in-out infinite; }
 .dk-orb-blue {
